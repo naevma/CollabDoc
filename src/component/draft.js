@@ -3,24 +3,27 @@ import {Editor, EditorState, RichUtils, Modifier} from 'draft-js';
 import ReactDOM from 'react-dom';
 import MuiThemeProvider from 'material-ui/styles/MuiThemeProvider';
 import RaisedButton from 'material-ui/RaisedButton';
-import DropDown from 'material-ui/DropDownMenu';
-
-const styleMap = {
-  'UPPERCASE': {
-    textTransform: 'uppercase'
-  },
-  'LOWERCASE': {
-    textTransform: 'lowercase'
-  }
-}
+import DropDownMenu from 'material-ui/DropDownMenu';
+import Menu from 'material-ui/Menu';
+import MenuItem from 'material-ui/MenuItem';
+import SelectField from 'material-ui/SelectField';
 
 class Draft extends React.Component {
   constructor(props) {
     super(props);
-    this.state = {editorState: EditorState.createEmpty()};
+    this.state = {
+      editorState: EditorState.createEmpty()
+    };
     this.onChange = (editorState) => this.setState({editorState});
     this.handleKeyCommand=this.handleKeyCommand.bind(this);
     this.toggleColor = (toggledColor) => this._toggleColor(toggledColor);
+  }
+
+  handleClick = event => {
+    this.setState({anchorE1: event.currentTarget})
+  }
+  handleClose = () => {
+    this.setState({anchorE1: null})
   }
 
   _onBoldClick() {
@@ -58,6 +61,26 @@ class Draft extends React.Component {
     this.onChange(RichUtils.toggleBlockType(this.state.editorState, 'header-six'));
   }
 
+  _onBulletListClick() {
+    this.onChange(RichUtils.toggleBlockType(this.state.editorState, 'unordered-list-item'));
+  }
+
+  _onNumberedListClick() {
+    this.onChange(RichUtils.toggleBlockType(this.state.editorState, 'ordered-list-item'));
+  }
+
+  _onCenterAlignClick() {
+    this.onChange(RichUtils.toggleBlockType(this.state.editorState, 'center'));
+  }
+
+  _onRightAlignClick() {
+    this.onChange(RichUtils.toggleBlockType(this.state.editorState, 'right'));
+  }
+
+  _onLeftAlignClick() {
+    this.onChange(RichUtils.toggleBlockType(this.state.editorState, 'left'));
+  }
+
   _toggleColor(toggledColor) {
     const {editorState} = this.state;
     const selection = editorState.getSelection();
@@ -91,6 +114,19 @@ class Draft extends React.Component {
     this.onChange(nextEditorState);
   }
 
+  myBlockStyleFn(contentBlock) {
+    const type = contentBlock.getType();
+    if (type === 'left') {
+      return 'align-left';
+    }
+    if (type === 'center') {
+      return 'align-center';
+    }
+    if (type === 'right') {
+      return 'align-right';
+    }
+  }
+
   handleKeyCommand(command, editorState) {
     const newState = RichUtils.handleKeyCommand(editorState, command);
     if (newState) {
@@ -103,11 +139,16 @@ class Draft extends React.Component {
   render() {
     const {editorState} = this.state;
     return (
-      <div>
+      <div style={styles.doc}>
       <div id="content">
-        <h1>Draft.js Editor</h1>
+        <h1>Document Editor</h1>
       </div>
       <div>
+      </div>
+      <div>
+      </div>
+      <div>
+      <div style={styles.toolbar}>
       <button>
         <i className="material-icons" onClick={this._onBoldClick.bind(this)}>format_bold</i>
       </button>
@@ -117,28 +158,59 @@ class Draft extends React.Component {
       <button>
         <i className="material-icons" onClick={this._onUnderlineClick.bind(this)}>format_underlined</i>
       </button>
-      <button onClick={this._onH1CLick.bind(this)}>H1</button>
-      <button onClick={this._onH2CLick.bind(this)}>H2</button>
-      <button onClick={this._onH3CLick.bind(this)}>H3</button>
-      <button onClick={this._onH4CLick.bind(this)}>H4</button>
-      <button onClick={this._onH5CLick.bind(this)}>H5</button>
-      <button onClick={this._onH6CLick.bind(this)}>H6</button>
-      <div style = {styles.root}>
-        <DropDown>
-            <ColorControls
-              editorState={editorState}
-              onToggle={this.toggleColor}
-            />
-          </DropDown>
-          <div style={styles.editor} onClick={this.focus}>
-                 <Editor
-                    customStyleMap={colorStyleMap}
+      <button>
+        <i className="material-icons" onClick={this._onBulletListClick.bind(this)}>format_list_bulleted</i>
+      </button>
+      <button>
+        <i className="material-icons" onClick={this._onNumberedListClick.bind(this)}>format_list_numbered</i>
+      </button>
+
+      <button>
+        <i className="material-icons" onClick={this._onLeftAlignClick.bind(this)}>format_align_left</i>
+      </button>
+
+      <button>
+        <i className="material-icons" onClick={this._onCenterAlignClick.bind(this)}>format_align_center</i>
+      </button>
+
+      <button>
+        <i className="material-icons" onClick={this._onRightAlignClick.bind(this)}>format_align_right</i>
+      </button>
+
+      <SelectField
+        hintText="Font Size" style={styles.textSizeField}
+        dropDownMenuProps={{
+          iconButton:<i className="material-icons">arrow_drop_down</i>
+        }}>
+          <MenuItem onClick={this._onH1CLick.bind(this)}>H1</MenuItem>
+          <MenuItem onClick={this._onH2CLick.bind(this)}>H2</MenuItem>
+          <MenuItem onClick={this._onH3CLick.bind(this)}>H3</MenuItem>
+          <MenuItem onClick={this._onH4CLick.bind(this)}>H4</MenuItem>
+          <MenuItem onClick={this._onH5CLick.bind(this)}>H5</MenuItem>
+          <MenuItem onClick={this._onH6CLick.bind(this)}>H6</MenuItem>
+      </SelectField>
+
+      <SelectField
+        hintText="Font Color" style={styles.fontColorField}
+        dropDownMenuProps={{
+          iconButton: <i className="material-icons">arrow_drop_down</i>
+        }}>
+          <ColorControls
+            editorState={editorState}
+            onToggle={this.toggleColor}
+          />
+      </SelectField>
+</div>
+        <div style={styles.editor} onClick={this.focus}>
+               <Editor
+                  customStyleMap={colorStyleMap}
                    editorState={editorState}
                    onChange={this.onChange}
+                   textAlignment={'right'}
+                   blockStyleFn = {this.myBlockStyleFn}
                    ref={(ref) => this.editor = ref}
-                 />
-          </div>
-      </div>
+                />
+        </div>
       </div>
       </div>
     );
@@ -169,30 +241,34 @@ class Draft extends React.Component {
           }
         }
 
-        var COLORS = [
-          {label: 'Red', style: 'red'},
-          {label: 'Orange', style: 'orange'},
-          {label: 'Yellow', style: 'yellow'},
-          {label: 'Green', style: 'green'},
-          {label: 'Blue', style: 'blue'},
-          {label: 'Indigo', style: 'indigo'},
-          {label: 'Violet', style: 'violet'},
-        ];
-        const ColorControls = (props) => {
-          var currentStyle = props.editorState.getCurrentInlineStyle();
-          return (
-            <div style={styles.controls}>
-              {COLORS.map(type =>
-                <StyleButton
-                  active={currentStyle.has(type.style)}
-                  label={type.label}
-                  onToggle={props.onToggle}
-                  style={type.style}
-                />
-              )}
-            </div>
-          );
-        };
+var COLORS = [
+  {label: 'Red', style: 'red'},
+  {label: 'Orange', style: 'orange'},
+  {label: 'Yellow', style: 'yellow'},
+  {label: 'Green', style: 'green'},
+  {label: 'Blue', style: 'blue'},
+  {label: 'Indigo', style: 'indigo'},
+  {label: 'Violet', style: 'violet'},
+];
+const ColorControls = (props) => {
+  var currentStyle = props.editorState.getCurrentInlineStyle();
+  return (
+    <div style={styles.controls}>
+      {COLORS.map(type =>
+        <div>
+        <RaisedButton>
+          <StyleButton
+            active={currentStyle.has(type.style)}
+            label={type.label}
+            onToggle={props.onToggle}
+            style={type.style}
+          />
+        </RaisedButton>
+        </div>
+      )}
+    </div>
+  );
+};
 
 // This object provides the styling information for our custom color
 // styles.
@@ -220,14 +296,26 @@ const colorStyleMap = {
   },
 };
 const styles = {
+  doc: {
+    borderColor: 'blue',
+    borderWidth: '10px',
+    borderStyle: 'solid'
+  },
+  toolbar: {
+    borderColor: 'black',
+    borderStyle: 'solid',
+    borderWidth: '1px',
+    paddingBottom: 60,
+    height: 45,
+    alignContent: 'center',
+    justifyElements: 'center'
+  },
   root: {
     fontFamily: '\'Georgia\', serif',
     fontSize: 14,
     padding: 20,
-    width: 600,
   },
   editor: {
-    borderTop: '1px solid #ddd',
     cursor: 'text',
     fontSize: 16,
     marginTop: 20,
@@ -241,11 +329,22 @@ const styles = {
     userSelect: 'none',
   },
   styleButton: {
-    color: '#999',
+    color: 'black',
     cursor: 'pointer',
     marginRight: 16,
     padding: '2px 0',
+    marginTop: 20
   },
+  textSizeField: {
+    width: 100,
+    height: 45,
+    paddingTop: 30
+  },
+  fontColorField: {
+    width: 110,
+    height: 45,
+    paddingTop: 30
+  }
 };
 
 export default Draft;
