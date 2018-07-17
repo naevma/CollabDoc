@@ -77,8 +77,11 @@ export default class Login extends React.Component {
             placeholder="Enter your password"
             value = {this.state.password}
             onChange = {event => this.setPassword(event)}
+            style = {{marginBottom: '5%'}}
           /><br />
-          <RaisedButton label = "Login" primary = {true} onClick = {() => this.login()}/>
+          <RaisedButton label = "Login" primary = {true} onClick = {() => this.props.redirect('Content')}/>
+          <p> OR </p>
+          <RaisedButton label = "BACK" secondary = {true} onClick = {() => this.props.redirect('Home')}/>
         </div>
         </div>
         </MuiThemeProvider> : <App />}

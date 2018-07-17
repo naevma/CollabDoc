@@ -93,8 +93,11 @@ export default class Register extends React.Component {
               placeholder="Repeat password"
               value = {this.state.repeatPassword}
               onChange = {event => this.setRepeatPassword(event)}
+              style = {{marginBottom: '5%'}}
             /><br />
             <RaisedButton label = "Register" secondary = {true} onClick = {() => this.register()}/>
+            <p> OR </p>
+            <RaisedButton label = "BACK" secondary = {true} onClick = {() => this.props.redirect('Home')}/>
           </div>
           </div>
           </MuiThemeProvider> : <App />}

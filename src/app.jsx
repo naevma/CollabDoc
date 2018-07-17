@@ -15,7 +15,7 @@ export default class App extends React.Component {
   constructor(props){
     super(props)
     this.state = {
-      currentPage: 'Content'
+      currentPage: 'Home'
     }
   }
 
@@ -39,10 +39,10 @@ export default class App extends React.Component {
               </div>
             </div>
         </MuiThemeProvider> : null }
-      {this.state.currentPage === 'Login' ?  <Login redirect = {this.state.redirect} /> : null}
-      {this.state.currentPage === 'Register' ?  <Register redirect = {this.state.redirect}/>  : null}
-      {this.state.currentPage === 'Document' ? <Document /> : null}
-      {this.state.currentPage === 'Content' ? <Content /> : null}
+      {this.state.currentPage === 'Login' ?  <Login redirect = {this.redirect} /> : null}
+      {this.state.currentPage === 'Register' ?  <Register redirect = {this.redirect}/>  : null}
+      {this.state.currentPage === 'Document' ? <Document redirect = {this.redirect} /> : null}
+      {this.state.currentPage === 'Content' ? <Content redirect = {this.redirect}/> : null}
       <Draft />
     </div>
     );

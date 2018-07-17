@@ -85,6 +85,7 @@ export default class Content extends React.Component {
             onRequestChange = {(open) => this.setState({open})}>
 
             <AppBar title = "Menu" />
+            <MenuItem onClick = {() => this.props.redirect('Home')}>Home</MenuItem>
             <MenuItem onClick = {this.showView}>View Docs</MenuItem>
             <MenuItem onClick = {this.showCreate}>Create Docs</MenuItem>
             <MenuItem onClick = {this.showAdd}>Add Docs</MenuItem>
