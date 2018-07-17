@@ -8,7 +8,9 @@ import RaisedButton from 'material-ui/RaisedButton';
 class Draft extends React.Component {
   constructor(props) {
     super(props);
-    this.state = {editorState: EditorState.createEmpty()};
+    this.state = {
+      editorState: EditorState.createEmpty()
+    };
     this.onChange = (editorState) => this.setState({editorState});
     this.handleKeyCommand=this.handleKeyCommand.bind(this);
   }
