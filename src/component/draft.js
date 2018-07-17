@@ -38,6 +38,18 @@ class Draft extends React.Component {
     this.onChange(RichUtils.toggleInlineStyle(this.state.editorState, 'UNDERLINE'));
   }
 
+  _onLeftAlignClick() {
+    this.onChange(RichUtils.toggleBlockType(this.state.editorState, 'left'));
+  }
+
+  _onCenterAlignClick() {
+    this.onChange(RichUtils.toggleBlockType(this.state.editorState, 'center'));
+  }
+
+  _onRightAlignClick() {
+    this.onChange(RichUtils.toggleBlockType(this.state.editorState, 'right'));
+  }
+
   _onH1CLick() {
     this.onChange(RichUtils.toggleBlockType(this.state.editorState, 'header-one'));
   }
