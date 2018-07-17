@@ -5,6 +5,15 @@ import MuiThemeProvider from 'material-ui/styles/MuiThemeProvider';
 import RaisedButton from 'material-ui/RaisedButton';
 import DropDown from 'material-ui/DropDownMenu';
 
+const styleMap = {
+  'UPPERCASE': {
+    textTransform: 'uppercase'
+  },
+  'LOWERCASE': {
+    textTransform: 'lowercase'
+  }
+}
+
 class Draft extends React.Component {
   constructor(props) {
     super(props);
@@ -24,6 +33,29 @@ class Draft extends React.Component {
 
   _onUnderlineClick() {
     this.onChange(RichUtils.toggleInlineStyle(this.state.editorState, 'UNDERLINE'));
+  }
+
+  _onH1CLick() {
+    this.onChange(RichUtils.toggleBlockType(this.state.editorState, 'header-one'));
+  }
+
+  _onH2CLick() {
+    this.onChange(RichUtils.toggleBlockType(this.state.editorState, 'header-two'));
+  }
+
+  _onH3CLick() {
+    this.onChange(RichUtils.toggleBlockType(this.state.editorState, 'header-three'));
+  }
+  _onH4CLick() {
+    this.onChange(RichUtils.toggleBlockType(this.state.editorState, 'header-four'));
+  }
+
+  _onH5CLick() {
+    this.onChange(RichUtils.toggleBlockType(this.state.editorState, 'header-five'));
+  }
+
+  _onH6CLick() {
+    this.onChange(RichUtils.toggleBlockType(this.state.editorState, 'header-six'));
   }
 
   _toggleColor(toggledColor) {
@@ -85,6 +117,12 @@ class Draft extends React.Component {
       <button>
         <i className="material-icons" onClick={this._onUnderlineClick.bind(this)}>format_underlined</i>
       </button>
+      <button onClick={this._onH1CLick.bind(this)}>H1</button>
+      <button onClick={this._onH2CLick.bind(this)}>H2</button>
+      <button onClick={this._onH3CLick.bind(this)}>H3</button>
+      <button onClick={this._onH4CLick.bind(this)}>H4</button>
+      <button onClick={this._onH5CLick.bind(this)}>H5</button>
+      <button onClick={this._onH6CLick.bind(this)}>H6</button>
       <div style = {styles.root}>
         <DropDown>
             <ColorControls
@@ -101,80 +139,12 @@ class Draft extends React.Component {
                  />
           </div>
       </div>
-        <Editor
-          editorState={this.state.editorState}
-          handleKeyCommand ={this.handleKeyCommand}
-          onChange={this.onChange}
-        />
       </div>
       </div>
     );
   }
 }
 
-// class ColorEditor extends React.Component {
-//   constructor(props) {
-//     super(props);
-//     this.state = {editorState: EditorState.createEmpty()}
-//     this.focus = () => this.editor.focus();
-//     this.onChange = (editorState) => this.setState({editorState});
-//     this.toggleColor = (toggledColor) => this._toggleColor(toggledColor);
-//   }
-//
-//   _toggleColor(toggledColor) {
-//     const {editorState} = this.state;
-//     const selection = editorState.getSelection();
-//
-//
-//     const nextContentState = Object.keys(colorStyleMap)
-//     .reduce((contentState, color) => {
-//       return Modifier.removeInlineStyle(contentState, selection, color)
-//     }, editorState.getCurrentContent());
-//
-//     let nextEditorState = EditorState.push(
-//       editorState,
-//       nextContentState,
-//       'change-inline-style'
-//     );
-//
-//     const currentStyle = editorState.getCurrentInlineStyle();
-//
-//     if(selection.isCollapsed()) {
-//       nextEditorState = currentStyle.reduce((state, color) => {
-//         return RichUtils.toggleInlineStyle(state, color);
-//       }, nextEditorState);
-//     }
-//
-//     if (!currentStyle.has(toggledColor)) {
-//       nextEditorState = RichUtils.toggleInlineStyle(
-//         nextEditorState,
-//         toggledColor
-//       );
-//     }
-//
-//     this.onChange(nextEditorState);
-//   }
-//
-//     render() {
-//       const {editorState} = this.state
-//       return (
-//     <div style = {styles.root}>
-//           <ColorControls
-//             editorState={editorState}
-//             onToggle={this.toggleColor}
-//           />
-//         <div style={styles.editor} onClick={this.focus}>
-//                <Editor
-//                   customStyleMap={colorStyleMap}
-//                  editorState={editorState}
-//                  onChange={this.onChange}
-//                  ref={(ref) => this.editor = ref}
-//                />
-//         </div>
-//     </div>
-//       );
-//     }
-//   }
 
   class StyleButton extends React.Component {
           constructor(props) {
@@ -198,6 +168,7 @@ class Draft extends React.Component {
             );
           }
         }
+
         var COLORS = [
           {label: 'Red', style: 'red'},
           {label: 'Orange', style: 'orange'},
@@ -222,60 +193,59 @@ class Draft extends React.Component {
             </div>
           );
         };
-        // This object provides the styling information for our custom color
-        // styles.
-        const colorStyleMap = {
-          red: {
-            color: 'rgba(255, 0, 0, 1.0)',
-          },
-          orange: {
-            color: 'rgba(255, 127, 0, 1.0)',
-          },
-          yellow: {
-            color: 'rgba(180, 180, 0, 1.0)',
-          },
-          green: {
-            color: 'rgba(0, 180, 0, 1.0)',
-          },
-          blue: {
-            color: 'rgba(0, 0, 255, 1.0)',
-          },
-          indigo: {
-            color: 'rgba(75, 0, 130, 1.0)',
-          },
-          violet: {
-            color: 'rgba(127, 0, 255, 1.0)',
-          },
-        };
-        const styles = {
-          root: {
-            fontFamily: '\'Georgia\', serif',
-            fontSize: 14,
-            padding: 20,
-            width: 600,
-          },
-          editor: {
-            borderTop: '1px solid #ddd',
-            cursor: 'text',
-            fontSize: 16,
-            marginTop: 20,
-            minHeight: 400,
-            paddingTop: 20,
-          },
-          controls: {
-            fontFamily: '\'Helvetica\', sans-serif',
-            fontSize: 14,
-            marginBottom: 10,
-            userSelect: 'none',
-          },
-          styleButton: {
-            color: '#999',
-            cursor: 'pointer',
-            marginRight: 16,
-            padding: '2px 0',
-          },
-        };
 
-
+// This object provides the styling information for our custom color
+// styles.
+const colorStyleMap = {
+  red: {
+    color: 'rgba(255, 0, 0, 1.0)',
+  },
+  orange: {
+    color: 'rgba(255, 127, 0, 1.0)',
+  },
+  yellow: {
+    color: 'rgba(180, 180, 0, 1.0)',
+  },
+  green: {
+    color: 'rgba(0, 180, 0, 1.0)',
+  },
+  blue: {
+    color: 'rgba(0, 0, 255, 1.0)',
+  },
+  indigo: {
+    color: 'rgba(75, 0, 130, 1.0)',
+  },
+  violet: {
+    color: 'rgba(127, 0, 255, 1.0)',
+  },
+};
+const styles = {
+  root: {
+    fontFamily: '\'Georgia\', serif',
+    fontSize: 14,
+    padding: 20,
+    width: 600,
+  },
+  editor: {
+    borderTop: '1px solid #ddd',
+    cursor: 'text',
+    fontSize: 16,
+    marginTop: 20,
+    minHeight: 400,
+    paddingTop: 20,
+  },
+  controls: {
+    fontFamily: '\'Helvetica\', sans-serif',
+    fontSize: 14,
+    marginBottom: 10,
+    userSelect: 'none',
+  },
+  styleButton: {
+    color: '#999',
+    cursor: 'pointer',
+    marginRight: 16,
+    padding: '2px 0',
+  },
+};
 
 export default Draft;
