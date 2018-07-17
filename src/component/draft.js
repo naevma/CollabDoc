@@ -35,6 +35,18 @@ class Draft extends React.Component {
     this.onChange(RichUtils.toggleInlineStyle(this.state.editorState, 'UNDERLINE'));
   }
 
+  _onLeftAlignClick() {
+    this.onChange(RichUtils.toggleBlockType(this.state.editorState, 'left'));
+  }
+
+  _onCenterAlignClick() {
+    this.onChange(RichUtils.toggleBlockType(this.state.editorState, 'center'));
+  }
+
+  _onRightAlignClick() {
+    this.onChange(RichUtils.toggleBlockType(this.state.editorState, 'right'));
+  }
+
   _onH1CLick() {
     this.onChange(RichUtils.toggleBlockType(this.state.editorState, 'header-one'));
   }
@@ -91,6 +103,19 @@ class Draft extends React.Component {
     this.onChange(nextEditorState);
   }
 
+myBlockStyleFn(contentBlock) {
+  const type = contentBlock.getType();
+  if (type === 'left') {
+    return 'align-left';
+  }
+  if (type === 'center') {
+    return 'align-center';
+  }
+  if (type === 'right') {
+    return 'align-right';
+  }
+}
+
   handleKeyCommand(command, editorState) {
     const newState = RichUtils.handleKeyCommand(editorState, command);
     if (newState) {
@@ -117,6 +142,15 @@ class Draft extends React.Component {
       <button>
         <i className="material-icons" onClick={this._onUnderlineClick.bind(this)}>format_underlined</i>
       </button>
+      <button>
+        <i className="material-icons" onClick={this._onLeftAlignClick.bind(this)}>format_align_left</i>
+      </button>
+      <button>
+        <i className="material-icons" onClick={this._onCenterAlignClick.bind(this)}>format_align_center</i>
+      </button>
+      <button>
+        <i className="material-icons" onClick={this._onRightAlignClick.bind(this)}>format_align_right</i>
+      </button>
       <button onClick={this._onH1CLick.bind(this)}>H1</button>
       <button onClick={this._onH2CLick.bind(this)}>H2</button>
       <button onClick={this._onH3CLick.bind(this)}>H3</button>
@@ -135,6 +169,8 @@ class Draft extends React.Component {
                     customStyleMap={colorStyleMap}
                    editorState={editorState}
                    onChange={this.onChange}
+                   textAlignment={'right'}
+                   blockStyleFn={this.myBlockStyleFn}
                    ref={(ref) => this.editor = ref}
                  />
           </div>
