@@ -149,6 +149,31 @@ class Draft extends React.Component {
       </div>
       <div>
       <div style={styles.toolbar}>
+      <div>
+      <SelectField
+        hintText="Font Size" style={styles.textSizeField}
+        dropDownMenuProps={{
+          iconButton:<i className="material-icons">arrow_drop_down</i>
+        }}>
+          <MenuItem onClick={this._onH1CLick.bind(this)}>H1</MenuItem>
+          <MenuItem onClick={this._onH2CLick.bind(this)}>H2</MenuItem>
+          <MenuItem onClick={this._onH3CLick.bind(this)}>H3</MenuItem>
+          <MenuItem onClick={this._onH4CLick.bind(this)}>H4</MenuItem>
+          <MenuItem onClick={this._onH5CLick.bind(this)}>H5</MenuItem>
+          <MenuItem onClick={this._onH6CLick.bind(this)}>H6</MenuItem>
+      </SelectField>
+
+      <SelectField
+        hintText="Font Color" style={styles.fontColorField}
+        dropDownMenuProps={{
+          iconButton: <i className="material-icons">arrow_drop_down</i>
+        }}>
+          <ColorControls
+            editorState={editorState}
+            onToggle={this.toggleColor}
+          />
+      </SelectField>
+      </div>
       <button>
         <i className="material-icons" onClick={this._onBoldClick.bind(this)}>format_bold</i>
       </button>
@@ -176,30 +201,6 @@ class Draft extends React.Component {
       <button>
         <i className="material-icons" onClick={this._onRightAlignClick.bind(this)}>format_align_right</i>
       </button>
-
-      <SelectField
-        hintText="Font Size" style={styles.textSizeField}
-        dropDownMenuProps={{
-          iconButton:<i className="material-icons">arrow_drop_down</i>
-        }}>
-          <MenuItem onClick={this._onH1CLick.bind(this)}>H1</MenuItem>
-          <MenuItem onClick={this._onH2CLick.bind(this)}>H2</MenuItem>
-          <MenuItem onClick={this._onH3CLick.bind(this)}>H3</MenuItem>
-          <MenuItem onClick={this._onH4CLick.bind(this)}>H4</MenuItem>
-          <MenuItem onClick={this._onH5CLick.bind(this)}>H5</MenuItem>
-          <MenuItem onClick={this._onH6CLick.bind(this)}>H6</MenuItem>
-      </SelectField>
-
-      <SelectField
-        hintText="Font Color" style={styles.fontColorField}
-        dropDownMenuProps={{
-          iconButton: <i className="material-icons">arrow_drop_down</i>
-        }}>
-          <ColorControls
-            editorState={editorState}
-            onToggle={this.toggleColor}
-          />
-      </SelectField>
 </div>
         <div style={styles.editor} onClick={this.focus}>
                <Editor
@@ -305,8 +306,8 @@ const styles = {
     borderColor: 'black',
     borderStyle: 'solid',
     borderWidth: '1px',
-    paddingBottom: 60,
-    height: 45,
+    paddingBottom: 20,
+    height: 80,
     alignContent: 'center',
     justifyElements: 'center'
   },
@@ -337,13 +338,11 @@ const styles = {
   },
   textSizeField: {
     width: 100,
-    height: 45,
-    paddingTop: 30
+    height: 45
   },
   fontColorField: {
     width: 110,
     height: 45,
-    paddingTop: 30
   }
 };
 
