@@ -3,6 +3,8 @@ import {Editor, EditorState} from 'draft-js';
 import MuiThemeProvider from 'material-ui/styles/MuiThemeProvider';
 import getMuiTheme from 'material-ui/styles/getMuiTheme';
 import AppBar from 'material-ui/AppBar';
+import Drawer from 'material-ui/Drawer';
+import MenuItem from 'material-ui/MenuItem';
 import RaisedButton from 'material-ui/RaisedButton';
 import TextField from 'material-ui/TextField';
 
@@ -14,7 +16,12 @@ export default class Register extends React.Component {
       currentPage: 'Register',
       username: '',
       password: '',
-      repeatPassword: ''
+      repeatPassword: '',
+      usernameFieldErr: '',
+      passwordFieldErr: '',
+      repeatPasswordFieldErr: '',
+      open: false,
+      show: null
     }
   }
 
@@ -31,77 +38,125 @@ export default class Register extends React.Component {
   }
 
   setRepeatPassword = (event) => {
+      this.setState({
+        repeatPassword: event.target.value
+      })
+  }
+
+  handleToggle = () => {
     this.setState({
-      repeatPassword: event.target.value
+      open: !this.state.open
     })
   }
 
   register = () => {
-
-    const {username, password, repeatPassword} = this.state;
-
-    fetch('', {
-      method: 'POST',
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        username,
-        password,
-        repeatPassword
+    if (this.state.username === ""){
+      this.setState({
+        usernameFieldErr: 'Please enter a username'
       })
-    })
-    .then((response) => {
-      if (response.status === 200) {
-        return response.json();
-      }
-      else {
-        // error
-      }
-    })
-    .then((responseJson) => {
-      if (responseJson.success){
-        this.props.redirect('Home')
-      }
-      console.log("response JSON", responseJson)
-    })
-    .catch((err) => {
-      /* do something if there was an error with fetching */
-    });
+    }
+    if (this.state.password === ""){
+      this.setState({
+        passwordFieldErr: 'Please enter a password'
+      })
+    }
+    if (this.state.repeatPassword === ""){
+      this.setState({
+        repeatPasswordFieldErr: 'Please confirm your password'
+      })
+    }
+    if (this.state.repeatPassword !== this.state.password){
+      this.setState({
+        repeatPasswordFieldErr: 'Your passwords do not match. Please try again.'
+      })
+    }
+
+    else if (this.state.username && this.state.password && this.state.repeatPassword) {
+      const {username, password, repeatPassword} = this.state;
+
+      fetch('http://f17128e5.ngrok.io/signup', {
+        method: 'POST',
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          username,
+          password,
+          repeatPassword
+        })
+      })
+      .then((response) => {
+        if (response.status === 200) {
+          return response.json();
+        }
+        else {
+          // error
+        }
+      })
+      .then((responseJson) => {
+        if (responseJson.success){
+          this.props.redirect('Home')
+        }
+        console.log("response JSON", responseJson)
+      })
+      .catch((err) => {
+        /* do something if there was an error with fetching */
+      });
+    }
   }
 
   render() {
     return (
-      <div className = "text-center">
-        {this.state.currentPage === 'Register' ?<MuiThemeProvider muiTheme={muiTheme}><div>
-            <AppBar title="Register" />
-            <div style = {{position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)'}}>
-            <TextField
-              type = "text"
-              placeholder="Enter a username"
-              value = {this.state.username}
-              onChange = {event => this.setUsername(event)}
-            /><br />
-            <TextField
-              type = "password"
-              placeholder="Enter a password"
-              value = {this.state.password}
-              onChange = {event => this.setPassword(event)}
-            /><br />
-            <TextField
-              type = "password"
-              placeholder="Repeat password"
-              value = {this.state.repeatPassword}
-              onChange = {event => this.setRepeatPassword(event)}
-              style = {{marginBottom: '5%'}}
-            /><br />
-            <RaisedButton label = "Register" secondary = {true} onClick = {() => this.register()}/>
-            <p> OR </p>
-            <RaisedButton label = "BACK" secondary = {true} onClick = {() => this.props.redirect('Home')}/>
+        <div className = "text-center">
+          {this.state.currentPage === 'Register' ?<MuiThemeProvider muiTheme={muiTheme}><div>
+              <AppBar title="Register" onLeftIconButtonClick = {this.handleToggle}/>
+              <Drawer
+                docked = {false}
+                width = {200}
+                open = {this.state.open}
+                onRequestChange = {(open) => this.setState({open})}>
+
+                <AppBar title = "Menu" showMenuIconButton={false} />
+                <MenuItem onClick = {() => this.props.redirect('Home')}>Home</MenuItem>
+              </Drawer>
+              <div style={{display: 'flex', justifyContent: 'center', alignItems: 'center'}}>
+              <div style = {{position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)'}}>
+              <TextField
+                type = "text"
+                hintText ="Enter a username"
+                floatingLabelText = "Username"
+                value = {this.state.username}
+                errorText = {this.state.usernameFieldErr}
+                onChange = {event => this.setUsername(event)}
+              /><br />
+              <TextField
+                type = "password"
+                hintText = "Enter a password"
+                floatingLabelText = "Password"
+                value = {this.state.password}
+                errorText = {this.state.passwordFieldErr}
+                onChange = {event => this.setPassword(event)}
+              /><br />
+              <TextField
+                type = "password"
+                hintText = "Repeat password"
+                floatingLabelText = "Repeat password"
+                value = {this.state.repeatPassword}
+                errorText = {this.state.repeatPasswordFieldErr}
+                onChange = {event => this.setRepeatPassword(event)}
+                style = {{marginBottom: '5%'}}
+              /><br />
+              <RaisedButton label = "Register" secondary = {true} onClick = {() => this.register()}/>
+              <div style = {{position: 'absolute', marginTop: '30%' }}>
+                <p>Already registered? Click the button below to login </p>
+                <RaisedButton label = "LOGIN" primary = {true} onClick = {() => this.props.redirect('Login')}/>
+              </div>
+            </div>
+            </div>
           </div>
-          </div>
-          </MuiThemeProvider> : <App />}
+            </MuiThemeProvider> : <App />}
       </div>
+
 
     );
   }

@@ -33,13 +33,11 @@ onClick(){
         <List>
              <ListItem
                leftAvatar={<Avatar icon={<ActionAssignment />} backgroundColor={blue500} />}
-
                primaryText="Vacation itinerary"
                secondaryText="Jan 20, 2018"
              />
              <ListItem
                leftAvatar={<Avatar icon={<ActionAssignment />} backgroundColor={blue500} />}
-
                primaryText="Europe Trip"
                secondaryText="March 10, 2018"
              />

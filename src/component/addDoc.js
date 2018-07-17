@@ -15,21 +15,50 @@ class AddDoc extends React.Component {
     }
   }
 
-  onChangeDocID(e){
+  onChangeDocID = (e) => {
     this.setState({
       documentID: e.target.value
     })
   }
 
-  onChangePassword(e){
+  onChangePassword = (e) => {
     this.setState({
       password: e.target.value
     })
   }
 
-onClick(){
+  onClick = () => {
 
-}
+    const {documentID, password} = this.state;
+
+    fetch('', {
+      method: 'POST',
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        documentID,
+        password
+      })
+    })
+    .then((response) => {
+      if (response.status === 200) {
+        return response.json();
+      }
+      else {
+        // error
+      }
+    })
+    .then((responseJson) => {
+      if (responseJson.success){
+        // navigate to draft js or the editor
+      }
+      console.log("response JSON", responseJson)
+    })
+    .catch((err) => {
+      /* do something if there was an error with fetching */
+    });
+  }
 
   render() {
     return (
@@ -38,14 +67,14 @@ onClick(){
         <div>
           <TextField
             hintText="Document ID"
-            onChange={this.onChangeDocID.bind(this)}
+            onChange={event => this.onChangeDocID(event)}
           />
 
         </div>
 
         <div><TextField
           hintText="Password"
-          onChange={this.onChangePassword.bind(this)}
+          onChange={event => this.onChangePassword(event)}
 
         /></div>
         <div
@@ -53,7 +82,7 @@ onClick(){
           >
 
             <RaisedButton
-              onClick={this.onClick.bind(this)}
+              onClick={() => this.onClick()}
               label="Add Doc" primary={true}  />
             </div>
 

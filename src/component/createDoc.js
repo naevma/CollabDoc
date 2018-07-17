@@ -15,19 +15,19 @@ class CreateDoc extends React.Component {
     }
   }
 
-  onChangeDocID(e){
+  onChangeDocID = (e) => {
     this.setState({
       title: e.target.value
     })
   }
 
-  onChangePassword(e){
+  onChangePassword = (e) => {
     this.setState({
       password: e.target.value
     })
   }
 
-onClick(){
+onClick = () => {
 
 }
 
@@ -38,14 +38,14 @@ onClick(){
         <div>
           <TextField
             hintText="Title"
-            onChange={this.onChangeDocID.bind(this)}
+            onChange={() => this.onChangeDocID(event)}
           />
 
         </div>
 
         <div><TextField
           hintText="Password"
-          onChange={this.onChangePassword.bind(this)}
+          onChange={() => this.onChangePassword(event)}
 
         /></div>
         <div
@@ -53,7 +53,7 @@ onClick(){
           >
 
             <RaisedButton
-              onClick={this.onClick.bind(this)}
+              onClick={() => this.onClick()}
               label="Create Doc" primary={true}  />
             </div>
 
