@@ -156,10 +156,6 @@ class Draft extends React.Component {
         <h1>Document Editor</h1>
       </div>
       <div>
-      </div>
-      <div>
-      </div>
-      <div>
       <div style={styles.toolbar}>
       <div>
       <SelectField
