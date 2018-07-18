@@ -16,6 +16,7 @@ class Draft extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
+
       editorState: EditorState.createEmpty(),
       online: [],
       title: 'Untitled Doc',
