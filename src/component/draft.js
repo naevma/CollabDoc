@@ -1,5 +1,5 @@
 import React from 'react';
-import {Editor, EditorState, RichUtils, Modifier} from 'draft-js';
+import {Editor, EditorState, DefaultDraftBlockRenderMap, RichUtils, ContentState, convertToRaw, convertFromRaw, Modifier} from 'draft-js';
 import ReactDOM from 'react-dom';
 import MuiThemeProvider from 'material-ui/styles/MuiThemeProvider';
 import RaisedButton from 'material-ui/RaisedButton';
@@ -7,16 +7,48 @@ import DropDownMenu from 'material-ui/DropDownMenu';
 import Menu from 'material-ui/Menu';
 import MenuItem from 'material-ui/MenuItem';
 import SelectField from 'material-ui/SelectField';
+import io from 'socket.io-client'
+
+const baseURL = 'http://localhost:3000'
+
 
 class Draft extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
-      editorState: EditorState.createEmpty()
+      editorState: EditorState.createEmpty(),
+      online: [],
+      title: 'Untitled Doc',
+      contentHistory: [],
+      saved: false
     };
     this.onChange = (editorState) => this.setState({editorState});
     this.handleKeyCommand=this.handleKeyCommand.bind(this);
     this.toggleColor = (toggledColor) => this._toggleColor(toggledColor);
+
+
+    this.previousHighlight = null;
+
+    this.socket = io.connect(baseURL);
+
+    this.socket.on('welcome', ({doc}) => {
+      console.log('User')
+    })
+
+    this.socket.on('receivedNewContent', stringifiedContent => {
+      console.log('new content, updating state');
+      const contentState = convertFromRaw(JSON.parse(stringifiedContent))
+      const newEditorState = EditorState.createWithContent(contentState)
+      this.setState({editorState: newEditorState})
+    })
+
+    this.socket.on('receivedNewContentHistory', contentHistory => {
+      console.log('recieved new content history')
+      contentHistory = uniq(contentHistory);
+      this.setState({contentHistory: contentHistory}, () => {
+        console.log('received new content history', this.state.contentHistory)
+      })
+    })
   }
 
   handleClick = event => {
@@ -94,7 +126,7 @@ class Draft extends React.Component {
   }
 
   _toggleColor(toggledColor) {
-    const {editorState} = this.state;
+    const {editorState} = this.state.editorState;
     const selection = editorState.getSelection();
 
     const nextContentState = Object.keys(colorStyleMap)
@@ -139,6 +171,11 @@ class Draft extends React.Component {
     }
   }
 
+  _onSave() {
+    this.setState({saved: true})
+    console.log(this.state.saved)
+  }
+
   handleKeyCommand(command, editorState) {
     const newState = RichUtils.handleKeyCommand(editorState, command);
     if (newState) {
@@ -154,6 +191,9 @@ class Draft extends React.Component {
       <div style={styles.doc}>
       <div id="content">
         <h1>Document Editor</h1>
+      </div>
+      <div>
+        <h2> {this.state.title} </h2>
       </div>
       <div>
       <div style={styles.toolbar}>
@@ -209,6 +249,7 @@ class Draft extends React.Component {
       <button>
         <i className="material-icons" onClick={this._onRightAlignClick.bind(this)}>format_align_right</i>
       </button>
+
 </div>
         <div style={styles.editor} onClick={this.focus}>
                <Editor
@@ -220,6 +261,7 @@ class Draft extends React.Component {
                    ref={(ref) => this.editor = ref}
                 />
         </div>
+        <RaisedButton onClick= {this._onSave.bind(this)}>Save!</RaisedButton>
       </div>
       </div>
     );
