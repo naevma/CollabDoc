@@ -109,7 +109,7 @@ export default class Login extends React.Component {
             <AppBar title = "Menu" showMenuIconButton={false} />
             <MenuItem onClick = {() => this.props.redirect('Home')}>Home</MenuItem>
           </Drawer>
-          <div style = {{position: 'absolute', top: '30%', left: '50%', transform: 'translate(-50%, -30%)'}}>
+          <div style = {{position: 'absolute', top: '20%', left: '50%', transform: 'translate(-50%, -20%)'}}>
             <ListItem
               disabled={true}
               leftAvatar={<Avatar>A</Avatar>}

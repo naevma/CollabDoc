@@ -72,6 +72,7 @@ class ViewDocs extends React.Component {
               leftAvatar={<Avatar icon={<ActionAssignment />} backgroundColor={blue500}/>}
               primaryText = {doc.title}
               secondaryText = {new Date(doc.created).toString().slice(0,15)}
+              
             />)}
           </List>
         </div>

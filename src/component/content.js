@@ -97,7 +97,8 @@ export default class Content extends React.Component {
             <MenuItem onClick = {this.showAdd}>Add Docs</MenuItem>
           </Drawer>
           <Paper style = {paperStyle} zDepth={5}>
-            <h1> WUS GUCCI </h1>
+            <h1>Welcome to this beautiful, fire page.</h1>
+            <p>Press the menu bar to access your amazing documents.</p>
             {this.state.show === 'View' ?  <ViewDoc redirect = {this.redirect}/>  : null}
             {this.state.show === 'Add' ? <AddDoc redirect = {this.redirect} /> : null}
             {this.state.show === 'Create' ? <CreateDoc redirect = {this.redirect}/> : null}
