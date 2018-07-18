@@ -9,3 +9,8 @@
 .align-center {
   text-align: center;
 }
+
+.search-highlight{
+  background-color: yellow;
+  color: black;
+}
