@@ -1,13 +1,19 @@
 import React from 'react';
-import {Editor, EditorState, RichUtils, Modifier, CompositeDecorator } from 'draft-js';
+import {Editor, EditorState, DefaultDraftBlockRenderMap, RichUtils, ContentState, convertToRaw, convertFromRaw, Modifier, CompositeDecorator} from 'draft-js';
 import ReactDOM from 'react-dom';
 import MuiThemeProvider from 'material-ui/styles/MuiThemeProvider';
 import RaisedButton from 'material-ui/RaisedButton';
 import DropDownMenu from 'material-ui/DropDownMenu';
 import Menu from 'material-ui/Menu';
 import MenuItem from 'material-ui/MenuItem';
+import TextField from 'material-ui/TextField'
 import SelectField from 'material-ui/SelectField';
 import TextField from 'material-ui/TextField';
+import _ from 'underscore';
+import io from 'socket.io-client'
+
+const baseURL = 'http://localhost:3000'
+
 
 class Draft extends React.Component {
   constructor(props) {
@@ -15,10 +21,121 @@ class Draft extends React.Component {
     this.state = {
       editorState: EditorState.createEmpty(),
       search: ''
+      online: [],
+      title: 'Untitled Doc',
+      contentHistory: [],
+      saved: false,
+      collaborators: [],
+      currentDocument: {},
+      autosave: false,
+      online: []
     };
     this.onChange = (editorState) => this.setState({editorState});
     this.handleKeyCommand=this.handleKeyCommand.bind(this);
     this.toggleColor = (toggledColor) => this._toggleColor(toggledColor);
+
+    this.previousHighlight = null;
+
+    this.socket = io.connect(baseURL);
+
+    this.socket.on('welcome', ({doc}) => {
+      console.log('User')
+    })
+
+    this.socket.on('userjoined', () => {
+      console.log('user has joined the room')
+    })
+
+    this.socket.on('onlineUpdated', ({online}) => {
+      console.log('onlineUpdated', online);
+      this.setState({online:online}, () => {
+        var userIndex = _.findIndex(this.state.online, function(user){
+          return user._id === props.store.get('user')._id;
+        })
+      })
+    })
+
+    this.socket.on('receivedNewContent', stringifiedContent => {
+      console.log('new content, updating state');
+      const contentState = convertFromRaw(JSON.parse(stringifiedContent))
+      const newEditorState = EditorState.createWithContent(contentState)
+      this.setState({editorState: newEditorState})
+    })
+
+    this.socket.on('receivedNewContentHistory', contentHistory => {
+      console.log('recieved new content history')
+      contentHistory = uniq(contentHistory);
+      this.setState({contentHistory: contentHistory}, () => {
+        console.log('received new content history', this.state.contentHistory)
+      })
+    })
+
+    this.socket.on('receiveNewCursor', (data) => {
+      const incomingSelectionObj = data.incomingSelectionObj
+      const loc = data.loc;
+      let editorState = this.state.editorState;
+      const originalEditorState = editorState;
+      const originalSelection = this.state.editorState.getSelection();
+      const incomingSelectionState = originalSelection.merge(incomingSelectionObj);
+      const temporaryEditorState = EditorState.forceSelection(originalEditorState, incomingSelectionState)
+
+      if(temporaryEditorState) {
+        this.setState({editorState: temporaryEditorState}, function() {
+          if (loc && loc.top && loc.bottom && loc.left) {
+            this.setState({editorState: originalEditorState, top:loc.top, left: loc.left, height: loc.bottom - loc.top})
+          }
+        })
+      } else {
+        console.log('temporary state undefined')
+      }
+    })
+    this.socket.emit('joined')
+  }
+
+  autoSave() {
+    setInterval(this.onSave.bind(this), 30000);
+    this.setState({autosave: !this.state.autosave})
+  }
+
+  onChange(editorState) {
+    this.setState({editorState: editorState, saved: false})
+    const selection = editorState.getSelection()
+
+    if (this.previousHighlight) {
+      editorState = EditorState.acceptSelection(editorState, this.previousHighlight)
+      editorState = RichUtils.toggleInlineStyle(editorState)
+      editorState = EditorState.acceptSelection(editorState, selection)
+      this.previousHighlight = null;
+    }
+
+    if (selection.getStartOffset() === selection.getEndOffset()) {
+      if (selection._map._root.entries[5][1]) {
+        const windowSelection = window.getSelection();
+        if(windowSelection.rangeCount> 0) {
+          const range = windowSelection.getRangeAt(0);
+          const clientRects = range.getClientRects();
+
+          if(clientRects.length >0) {
+            const rects = clientRects[0];
+            const {top, left, bottom} = rexts;
+            const loc = {top: rects.top, bottom: rects.bottom, left: rects.left}
+            const data = {incomingSelectionObj: selection, loc: loc}
+            this.socket.emit('cursorMove', data)
+          }
+        }
+      }
+    } else {
+      editorState = RichUtils.toggleInlineStyle(editorState);
+      this.previousHighlight = editorState.getSelection();
+    }
+
+    var currentContent = convertToRaw(editorState.getCurrentContent());
+    this.socket.emit('newContent', JSON.stringify(currentContent))
+  }
+
+  componentWillUnmount() {
+    this.socket.emit('disconnect');
+    this.socket.disconnect();
   }
 
   onChangeSearch(e){
@@ -142,7 +259,7 @@ findWithRegex = (regex, contentBlock, callback) => {
   }
 
   _toggleColor(toggledColor) {
-    const {editorState} = this.state;
+    const {editorState} = this.state.editorState;
     const selection = editorState.getSelection();
 
     const nextContentState = Object.keys(colorStyleMap)
@@ -174,6 +291,8 @@ findWithRegex = (regex, contentBlock, callback) => {
     this.onChange(nextEditorState);
   }
 
+
+
   myBlockStyleFn(contentBlock) {
     const type = contentBlock.getType();
     if (type === 'left') {
@@ -185,6 +304,27 @@ findWithRegex = (regex, contentBlock, callback) => {
     if (type === 'right') {
       return 'align-right';
     }
+  }
+
+  _onSave() {
+    var newContent = JSON.stringify(convertToRaw(this.state.editorState.getCurrentContent()));
+    var contentState = convertToRaw(this.state.editorState.getCurrentContent());
+    contentState = JSON.stringify(contentState);
+    var newContentHistory = this.state.contentHistory.slice();
+    newContentHistory.push(contentState);
+    this.setState({contentHistory: newContentHistory}, () => {
+    this.socket.emit('newContentHistory', this.state.contentHistory)
+    })
+    var newTitle = this.state.title;
+    var rawContent = this.state.editorState.getCurrentContent();
+    var currentDocument = Object.assign({}, {content: rawContent})
+    this.setState({saved: true, currentDocument: currentDocument, title: newTitle, editorState: EditorState.createWithContent(rawContent)})
+    console.log(this.state.saved)
+  }
+
+  onTitleEdit(event) {
+    this.setState({saved: false, title: event.target.value})
+      console.log(this.state.title)
   }
 
   handleKeyCommand(command, editorState) {
@@ -210,6 +350,9 @@ findWithRegex = (regex, contentBlock, callback) => {
         label="Search"
         onClick={this.onClickSearch.bind(this)}
         primary={true}  />
+    <TextField id="text-field-controlled"
+      value={this.state.title}
+      onChange={this.onTitleEdit.bind(this)} />
       <div>
       <div style={styles.toolbar}>
       <div>
@@ -264,6 +407,7 @@ findWithRegex = (regex, contentBlock, callback) => {
       <button>
         <i className="material-icons" onClick={this._onRightAlignClick.bind(this)}>format_align_right</i>
       </button>
+
 </div>
         <div style={styles.editor} onClick={this.focus}>
                <Editor
@@ -275,6 +419,10 @@ findWithRegex = (regex, contentBlock, callback) => {
                    ref={(ref) => this.editor = ref}
                 />
         </div>
+        <RaisedButton
+          label={this.state.saved ? "Saved" : "Save"}
+          onClick= {this._onSave.bind(this)}>
+        </RaisedButton>
       </div>
       </div>
     );
