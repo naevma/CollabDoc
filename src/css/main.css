@@ -1,0 +1,12 @@
+h2 {
+  color: blue;
+}
+
+.editor {
+  min-height: 300px;
+  padding: 10px;
+}
+
+body {
+  height: 100vh
+}
