@@ -1,5 +1,5 @@
 import React from 'react';
-import {Editor, EditorState, DefaultDraftBlockRenderMap, RichUtils, ContentState, convertToRaw, convertFromRaw, Modifier} from 'draft-js';
+import {Editor, EditorState, DefaultDraftBlockRenderMap, RichUtils, ContentState, convertToRaw, convertFromRaw, Modifier, CompositeDecorator} from 'draft-js';
 import ReactDOM from 'react-dom';
 import MuiThemeProvider from 'material-ui/styles/MuiThemeProvider';
 import RaisedButton from 'material-ui/RaisedButton';
@@ -8,6 +8,7 @@ import Menu from 'material-ui/Menu';
 import MenuItem from 'material-ui/MenuItem';
 import TextField from 'material-ui/TextField'
 import SelectField from 'material-ui/SelectField';
+import TextField from 'material-ui/TextField';
 import _ from 'underscore';
 import io from 'socket.io-client'
 
@@ -19,6 +20,7 @@ class Draft extends React.Component {
     super(props);
     this.state = {
       editorState: EditorState.createEmpty(),
+      search: ''
       online: [],
       title: 'Untitled Doc',
       contentHistory: [],
@@ -134,6 +136,52 @@ class Draft extends React.Component {
   componentWillUnmount() {
     this.socket.emit('disconnect');
     this.socket.disconnect();
+  }
+
+  onChangeSearch(e){
+    this.setState({
+      search: e.target.value
+    })
+  }
+
+  SearchHighlight = (props) => (
+    <span className="search-highlight">{props.children}</span>
+  );
+
+  generateDecorator = (highlightTerm) => {
+    const regex = new RegExp(highlightTerm, 'g');
+    return new CompositeDecorator([{
+      strategy: (contentBlock, callback) => {
+        if (highlightTerm !== '') {
+          this.findWithRegex(regex, contentBlock, callback);
+        }
+      },
+      component: this.SearchHighlight,
+    }])
+};
+
+findWithRegex = (regex, contentBlock, callback) => {
+  const text = contentBlock.getText();
+  let matchArr, start, end;
+  while ((matchArr = regex.exec(text)) !== null) {
+    start = matchArr.index;
+    end = start + matchArr[0].length;
+    callback(start, end);
+  }
+};
+
+  onChangeSearch = (e) => {
+    const search = e.target.value;
+    this.setState({
+      search,
+      editorState: EditorState.set(this.state.editorState, { decorator: this.generateDecorator(search) }),
+    });
+  }
+
+  onClickSearch(){
+    console.log(this.state.search)
+    console.log(this.state.editorState.getCurrentContent().getPlainText())
+    //console.log(this.state.editorState.getPlainText())
   }
 
   handleClick = event => {
@@ -295,6 +343,13 @@ class Draft extends React.Component {
       <div id="content">
         <h1>Document Editor</h1>
       </div>
+      <TextField
+        hintText="Find in document"
+        onChange={this.onChangeSearch.bind(this)} />
+      <RaisedButton
+        label="Search"
+        onClick={this.onClickSearch.bind(this)}
+        primary={true}  />
     <TextField id="text-field-controlled"
       value={this.state.title}
       onChange={this.onTitleEdit.bind(this)} />
