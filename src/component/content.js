@@ -56,21 +56,27 @@ export default class Content extends React.Component {
     })
   }
 
+  redirect = (page) => {
+    this.setState({
+      show: page
+    })
+  }
+
   render() {
-    let content = null;
-    switch(this.state.show) {
-      case 'View':
-        content = (<ViewDoc />);
-        break;
-      case 'Create':
-        content = (<CreateDoc />)
-        break;
-      case 'Add':
-        content = (<AddDoc />)
-        break;
-      default:
-        content = <h1>Waiting</h1>
-    }
+    // let content = null;
+    // switch(this.state.show) {
+    //   case 'View':
+    //     content = ({this.state.currentPage === 'Login' ?  <ViewDoc redirect = {this.redirect} />});
+    //     break;
+    //   case 'Create':
+    //     content = (<CreateDoc redirect = {this.redirect} />)
+    //     break;
+    //   case 'Add':
+    //     content = (<AddDoc redirect = {this.redirect}/>)
+    //     break;
+    //   default:
+    //     content = <h1>Waiting</h1>
+    // }
     return (
       <div className = "text-center">
         {this.state.currentPage === "Content" ? <MuiThemeProvider muiTheme={muiTheme}><div>
@@ -84,14 +90,18 @@ export default class Content extends React.Component {
             open = {this.state.open}
             onRequestChange = {(open) => this.setState({open})}>
 
-            <AppBar title = "Menu" />
+            <AppBar title = "Menu" showMenuIconButton={false}/>
             <MenuItem onClick = {() => this.props.redirect('Home')}>Home</MenuItem>
             <MenuItem onClick = {this.showView}>View Docs</MenuItem>
             <MenuItem onClick = {this.showCreate}>Create Docs</MenuItem>
             <MenuItem onClick = {this.showAdd}>Add Docs</MenuItem>
           </Drawer>
           <Paper style = {paperStyle} zDepth={5}>
-            {content}
+            <h1>Welcome to this beautiful, fire page.</h1>
+            <p>Press the menu bar to access your amazing documents.</p>
+            {this.state.show === 'View' ?  <ViewDoc redirect = {this.redirect}/>  : null}
+            {this.state.show === 'Add' ? <AddDoc redirect = {this.redirect} /> : null}
+            {this.state.show === 'Create' ? <CreateDoc redirect = {this.redirect}/> : null}
           </Paper>
         </div>
         </MuiThemeProvider> : <App />}

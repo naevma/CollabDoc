@@ -6,3 +6,7 @@ h2 {
   min-height: 300px;
   padding: 10px;
 }
+
+body {
+  height: 100vh
+}
