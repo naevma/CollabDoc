@@ -12,6 +12,7 @@ import Login from './component/login'
 import Register from './component/register'
 import Document from './component/document'
 import Content from './component/content'
+import _ from 'underscore';
 
 
 export default class App extends React.Component {
