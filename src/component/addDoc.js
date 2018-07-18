@@ -9,27 +9,64 @@ import RaisedButton from 'material-ui/RaisedButton';
 class AddDoc extends React.Component {
   constructor(props) {
     super(props);
-    this.state={
+    this.state = {
+      currentPage: 'addDoc',
       documentID: '',
-      password:''
+      password: ''
     }
   }
 
-  onChangeDocID(e){
+  onChangeDocID = (e) => {
     this.setState({
       documentID: e.target.value
     })
   }
 
-  onChangePassword(e){
+  onChangePassword = (e) => {
     this.setState({
       password: e.target.value
     })
   }
 
-onClick(){
+  onClick = () => {
 
-}
+    const {documentID, password} = this.state;
+    console.log("document", documentID)
+
+    fetch('http://3d693881.ngrok.io/adddoc', {
+      method: 'POST',
+      headers: {
+        "Content-Type": "application/json"
+      },
+      credentials: "same-origin",
+      body: JSON.stringify({
+        documentID,
+        //password
+      })
+    })
+    .then((response) => {
+      console.log('RESPONSE', response)
+      if (response.status === 200) {
+        console.log("Success!")
+        return response.json();
+      }
+      else {
+        // error
+        console.log('error')
+      }
+    })
+    .then((responseJson) => {
+      console.log("response JSON", responseJson)
+      this.props.redirect("View")
+      // if (responseJson.success){
+      //   // navigate to draft js or the editor
+      //   console.log("responseJSON is a success", responseJson.success)
+      // }
+    })
+    .catch((err) => {
+      /* do something if there was an error with fetching */
+    });
+  }
 
   render() {
     return (
@@ -38,30 +75,31 @@ onClick(){
         <div>
           <TextField
             hintText="Document ID"
-            onChange={this.onChangeDocID.bind(this)}
+            floatingLabelText = "Document ID"
+            type = "text"
+            value = {this.state.documentID}
+            onChange={(event) => this.onChangeDocID(event)}
           />
 
         </div>
 
-        <div><TextField
-          hintText="Password"
-          onChange={this.onChangePassword.bind(this)}
+        {/* <div><TextField
+          hintText = "Password"
+          floatingLabelText = "Password"
+          type = "password"
+          value = {this.state.password}
+          onChange={(event) => this.onChangePassword(event)}
 
-        /></div>
-        <div
-          style={{ textAlign: 'center'}}
-          >
-
-            <RaisedButton
-              onClick={this.onClick.bind(this)}
-              label="Add Doc" primary={true}  />
-            </div>
-
-
-
+        /></div> */}
+        <div style={{ textAlign: 'center'}}>
+          <RaisedButton
+            onClick={() => this.onClick()}
+            label="Add Doc" primary={true}  />
           </div>
-        );
-      }
-    }
 
-    export default AddDoc;
+        </div>
+      );
+    }
+  }
+
+  export default AddDoc;
