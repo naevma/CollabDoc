@@ -16,7 +16,7 @@ export default class Register extends React.Component {
       currentPage: 'Register',
       username: '',
       password: '',
-      repeatPassword: '',
+      passwordRepeat: '',
       usernameFieldErr: '',
       passwordFieldErr: '',
       repeatPasswordFieldErr: '',
@@ -39,7 +39,7 @@ export default class Register extends React.Component {
 
   setRepeatPassword = (event) => {
       this.setState({
-        repeatPassword: event.target.value
+        passwordRepeat: event.target.value
       })
   }
 
@@ -60,21 +60,21 @@ export default class Register extends React.Component {
         passwordFieldErr: 'Please enter a password'
       })
     }
-    if (this.state.repeatPassword === ""){
+    if (this.state.passwordRepeat === ""){
       this.setState({
         repeatPasswordFieldErr: 'Please confirm your password'
       })
     }
-    if (this.state.repeatPassword !== this.state.password){
+    if (this.state.passwordRepeat !== this.state.password){
       this.setState({
         repeatPasswordFieldErr: 'Your passwords do not match. Please try again.'
       })
     }
 
-    else if (this.state.username && this.state.password && this.state.repeatPassword) {
-      const {username, password, repeatPassword} = this.state;
+    else if (this.state.username && this.state.password && this.state.passwordRepeat) {
+      const {username, password, passwordRepeat} = this.state;
 
-      fetch('http://f17128e5.ngrok.io/signup', {
+      fetch('http://373431e5.ngrok.io/signup', {
         method: 'POST',
         headers: {
           "Content-Type": "application/json"
@@ -82,22 +82,17 @@ export default class Register extends React.Component {
         body: JSON.stringify({
           username,
           password,
-          repeatPassword
+          passwordRepeat
         })
       })
       .then((response) => {
         if (response.status === 200) {
-          return response.json();
+          this.props.redirect('Home')
         }
         else {
           // error
+          console.log("ERRORR")
         }
-      })
-      .then((responseJson) => {
-        if (responseJson.success){
-          this.props.redirect('Home')
-        }
-        console.log("response JSON", responseJson)
       })
       .catch((err) => {
         /* do something if there was an error with fetching */
@@ -141,13 +136,13 @@ export default class Register extends React.Component {
                 type = "password"
                 hintText = "Repeat password"
                 floatingLabelText = "Repeat password"
-                value = {this.state.repeatPassword}
+                value = {this.state.passwordRepeat}
                 errorText = {this.state.repeatPasswordFieldErr}
                 onChange = {event => this.setRepeatPassword(event)}
                 style = {{marginBottom: '5%'}}
               /><br />
               <RaisedButton label = "Register" secondary = {true} onClick = {() => this.register()}/>
-              <div style = {{position: 'absolute', marginTop: '30%' }}>
+              <div style = {{position: 'absolute', marginTop: '40%' }}>
                 <p>Already registered? Click the button below to login </p>
                 <RaisedButton label = "LOGIN" primary = {true} onClick = {() => this.props.redirect('Login')}/>
               </div>

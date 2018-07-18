@@ -11,7 +11,7 @@ class AddDoc extends React.Component {
     super(props);
     this.state={
       documentID: '',
-      password:''
+      password: ''
     }
   }
 
@@ -30,8 +30,9 @@ class AddDoc extends React.Component {
   onClick = () => {
 
     const {documentID, password} = this.state;
+    console.log("document", documentID)
 
-    fetch('', {
+    fetch('http://373431e5.ngrok.io/adddoc', {
       method: 'POST',
       headers: {
         "Content-Type": "application/json"
@@ -43,18 +44,19 @@ class AddDoc extends React.Component {
     })
     .then((response) => {
       if (response.status === 200) {
-        return response.json();
+        console.log("Success!")
       }
       else {
         // error
+        console.log('error')
       }
     })
-    .then((responseJson) => {
-      if (responseJson.success){
-        // navigate to draft js or the editor
-      }
-      console.log("response JSON", responseJson)
-    })
+    // .then((responseJson) => {
+    //   if (responseJson.success){
+    //     // navigate to draft js or the editor
+    //   }
+    //   console.log("response JSON", responseJson)
+    // })
     .catch((err) => {
       /* do something if there was an error with fetching */
     });
@@ -67,14 +69,20 @@ class AddDoc extends React.Component {
         <div>
           <TextField
             hintText="Document ID"
-            onChange={event => this.onChangeDocID(event)}
+            floatingLabelText = "Document ID"
+            type = "text"
+            value = {this.state.documentID}
+            onChange={(event) => this.onChangeDocID(event)}
           />
 
         </div>
 
         <div><TextField
-          hintText="Password"
-          onChange={event => this.onChangePassword(event)}
+          hintText = "Password"
+          floatingLabelText = "Password"
+          type = "password"
+          value = {this.state.password}
+          onChange={(event) => this.onChangePassword(event)}
 
         /></div>
         <div

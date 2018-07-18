@@ -7,7 +7,9 @@ import Drawer from 'material-ui/Drawer';
 import MenuItem from 'material-ui/MenuItem';
 import RaisedButton from 'material-ui/RaisedButton';
 import TextField from 'material-ui/TextField';
-
+import List from 'material-ui/List/List';
+import ListItem from 'material-ui/List/ListItem';
+import Avatar from 'material-ui/Avatar';
 
 export default class Login extends React.Component {
   constructor(props){
@@ -54,33 +56,42 @@ export default class Login extends React.Component {
     }
 
     else if (this.state.username && this.state.password) {
+
       const {username, password} = this.state;
 
-        fetch('http://f17128e5.ngrok.io/login', {
-          method: 'POST',
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            username,
-            password
-          })
+      fetch('http://373431e5.ngrok.io/login', {
+        method: 'POST',
+        headers: {
+          "Content-Type": "application/json"
+        },
+        credentials: "same-origin",
+        body: JSON.stringify({
+          username,
+          password
         })
-        .then((response) => {
-            return response.json();
-        })
-        .then((responseJson) => {
-          if (responseJson.success){
-            this.props.redirect('Home')
-          }
-          else {
-            console.log("ERROR", responseJson.error)
-          }
-        })
-        .catch((err) => {
-          console.log("ANOTHA ERR", err)
-          /* do something if there was an error with fetching */
-        });
+      })
+      .then((response) => {
+        //debugger;
+        if (response.status === 200) {
+          this.props.redirect('Content')
+        }
+        else {
+          console.log("error");
+        }
+      })
+      // .then((responseJson) => {
+      //   console.log('response 2', responseJson)
+      //   if (responseJson.success){
+      //     this.props.redirect('Content')
+      //   }
+      //   else {
+      //     console.log("ERROR", responseJson.error)
+      //   }
+      // })
+      .catch((err) => {
+        console.log("ANOTHA ERR", err)
+        /* do something if there was an error with fetching */
+      });
     }
   }
 
@@ -98,37 +109,44 @@ export default class Login extends React.Component {
             <AppBar title = "Menu" showMenuIconButton={false} />
             <MenuItem onClick = {() => this.props.redirect('Home')}>Home</MenuItem>
           </Drawer>
-          <div style={{display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh'}}>
-          <div>
-            <TextField
-              type = "text"
-              hintText = "Enter your username"
-              floatingLabelText = "Username"
-              value = {this.state.username}
-              errorText = {this.state.usernameFieldErr}
-              onChange = {event => this.setUsername(event)}
-            /><br />
-            <TextField
-              type = "password"
-              hintText="Enter your password"
-              floatingLabelText = "Password"
-              value = {this.state.password}
-              errorText = {this.state.passwordFieldErr}
-              onChange = {event => this.setPassword(event)}
-              style = {{marginBottom: '5%'}}
-            /><br />
-            <RaisedButton label = "Login" primary = {true} onClick = {() => this.login()}/>
-            <div style = {{marginTop: '30%' }}>
-              <p> Or back to the home screen </p>
-              <RaisedButton label = "BACK" secondary = {true} onClick = {() => this.props.redirect('Home')}/>
+          <div style = {{position: 'absolute', top: '30%', left: '50%', transform: 'translate(-50%, -30%)'}}>
+            <ListItem
+              disabled={true}
+              leftAvatar={<Avatar>A</Avatar>}
+              >
+              </ListItem>
             </div>
+          <div style={{display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh'}}>
+            <div>
+              <TextField
+                type = "text"
+                hintText = "Enter your username"
+                floatingLabelText = "Username"
+                value = {this.state.username}
+                errorText = {this.state.usernameFieldErr}
+                onChange = {event => this.setUsername(event)}
+              /><br />
+              <TextField
+                type = "password"
+                hintText="Enter your password"
+                floatingLabelText = "Password"
+                value = {this.state.password}
+                errorText = {this.state.passwordFieldErr}
+                onChange = {event => this.setPassword(event)}
+                style = {{marginBottom: '5%'}}
+              /><br />
+              <RaisedButton label = "Login" primary = {true} onClick = {() => this.login()}/>
+              <div style = {{marginTop: '40%' }}>
+                <p> Or back to the home screen </p>
+                <RaisedButton label = "HOME" secondary = {true} onClick = {() => this.props.redirect('Home')}/>
+              </div>
+            </div>
+          </div>
         </div>
-        </div>
-      </div>
-        </MuiThemeProvider> : <App />}
+      </MuiThemeProvider> : <App />}
     </div>
-    );
-  }
+  );
+}
 }
 
 const muiTheme = getMuiTheme({

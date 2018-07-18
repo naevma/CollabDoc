@@ -15,7 +15,7 @@ class CreateDoc extends React.Component {
     }
   }
 
-  onChangeDocID = (e) => {
+  onChangeTitle= (e) => {
     this.setState({
       title: e.target.value
     })
@@ -27,9 +27,40 @@ class CreateDoc extends React.Component {
     })
   }
 
-onClick = () => {
+  onClick = () => {
 
-}
+    const {title, password} = this.state;
+    console.log("title", title)
+
+    fetch('http://373431e5.ngrok.io/createdoc', {
+      method: 'POST',
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        title,
+        password
+      })
+    })
+    .then((response) => {
+      if (response.status === 200) {
+        console.log("Success!")
+      }
+      else {
+        // error
+        console.log('error')
+      }
+    })
+    // .then((responseJson) => {
+    //   if (responseJson.success){
+    //     // navigate to draft js or the editor
+    //   }
+    //   console.log("response JSON", responseJson)
+    // })
+    .catch((err) => {
+      /* do something if there was an error with fetching */
+    });
+  }
 
   render() {
     return (
@@ -37,15 +68,21 @@ onClick = () => {
 
         <div>
           <TextField
-            hintText="Title"
-            onChange={() => this.onChangeDocID(event)}
+            hintText = "Title"
+            floatingLabelText = "Title"
+            type = "text"
+            value = {this.state.title}
+            onChange={(event) => this.onChangeTitle(event)}
           />
 
         </div>
 
         <div><TextField
-          hintText="Password"
-          onChange={() => this.onChangePassword(event)}
+          hintText = "Password"
+          floatingLabelText = "Password"
+          type = "password"
+          value = {this.state.password}
+          onChange={(event) => this.onChangePassword(event)}
 
         /></div>
         <div
