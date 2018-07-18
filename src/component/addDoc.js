@@ -9,7 +9,8 @@ import RaisedButton from 'material-ui/RaisedButton';
 class AddDoc extends React.Component {
   constructor(props) {
     super(props);
-    this.state={
+    this.state = {
+      currentPage: 'addDoc',
       documentID: '',
       password: ''
     }
@@ -32,31 +33,36 @@ class AddDoc extends React.Component {
     const {documentID, password} = this.state;
     console.log("document", documentID)
 
-    fetch('http://373431e5.ngrok.io/adddoc', {
+    fetch('http://3d693881.ngrok.io/adddoc', {
       method: 'POST',
       headers: {
         "Content-Type": "application/json"
       },
+      credentials: "same-origin",
       body: JSON.stringify({
         documentID,
-        password
+        //password
       })
     })
     .then((response) => {
+      console.log('RESPONSE', response)
       if (response.status === 200) {
         console.log("Success!")
+        return response.json();
       }
       else {
         // error
         console.log('error')
       }
     })
-    // .then((responseJson) => {
-    //   if (responseJson.success){
-    //     // navigate to draft js or the editor
-    //   }
-    //   console.log("response JSON", responseJson)
-    // })
+    .then((responseJson) => {
+      console.log("response JSON", responseJson)
+      this.props.redirect("View")
+      // if (responseJson.success){
+      //   // navigate to draft js or the editor
+      //   console.log("responseJSON is a success", responseJson.success)
+      // }
+    })
     .catch((err) => {
       /* do something if there was an error with fetching */
     });
@@ -77,28 +83,23 @@ class AddDoc extends React.Component {
 
         </div>
 
-        <div><TextField
+        {/* <div><TextField
           hintText = "Password"
           floatingLabelText = "Password"
           type = "password"
           value = {this.state.password}
           onChange={(event) => this.onChangePassword(event)}
 
-        /></div>
-        <div
-          style={{ textAlign: 'center'}}
-          >
-
-            <RaisedButton
-              onClick={() => this.onClick()}
-              label="Add Doc" primary={true}  />
-            </div>
-
-
-
+        /></div> */}
+        <div style={{ textAlign: 'center'}}>
+          <RaisedButton
+            onClick={() => this.onClick()}
+            label="Add Doc" primary={true}  />
           </div>
-        );
-      }
-    }
 
-    export default AddDoc;
+        </div>
+      );
+    }
+  }
+
+  export default AddDoc;

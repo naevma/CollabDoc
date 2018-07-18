@@ -18,44 +18,46 @@ import EditorInsertChart from 'material-ui/svg-icons/editor/insert-chart';
 class ViewDocs extends React.Component {
   constructor(props) {
     super(props);
-    this.state={
-      documents: []
+    this.state = {
+      curentPage: 'viewDoc',
+      documents: [],
+      message: ''
     }
   }
 
   componentDidMount() {
-    fetch('http://373431e5.ngrok.io/viewdoc', {
-      method: 'GET'
+    fetch('http://3d693881.ngrok.io/viewdoc', {
+      method: 'GET',
+      credentials: 'same-origin'
     })
     .then((response) => {
       console.log('response', response)
-      if (response.status === 200) {
-        console.log("Success!")
+      // if (response.status === 200) {
+      console.log("Success!")
+      return response.json()
+      // }
+      // else {
+      //   // error
+      //   console.log("ERRORR")
+      // }
+    })
+    .then((responseJson) => {
+      console.log("responseJson1", responseJson)
+      if (responseJson.success){
+        console.log("responseJSON", responseJson.success)
         this.setState({
-          documents: // response
+          documents: responseJson.data
         })
       }
       else {
-        // error
-        console.log("ERRORR")
+        console.log("ERROR", responseJson.error)
+        // this.setState({
+        //   message: responseJson.error
+        // })
       }
     })
-    // .then((responseJson) => {
-    //   console.log("responseJson1", responseJson)
-    //   if (responseJson.success){
-    //     console.log("responseJSON", responseJson.success)
-    //     // this.setState({
-    //     //   dataSource: responseJson.users
-    //     // })
-    //   }
-    //   else {
-    //     console.log("ERROR", responseJson.error)
-    //     this.setState({
-    //       message: responseJson.error
-    //     })
-    //   }
-    // })
     .catch((err) => {
+      console.log("ERROR", err)
       /* do something if there was an error with fetching */
     });
   }
@@ -65,26 +67,16 @@ class ViewDocs extends React.Component {
     return (
       <div style = {{position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)'}}>
         <List>
-          {this.state.documents.map((doc) => <ListItem
-            leftAvatar={<Avatar icon={<ActionAssignment />} backgroundColor={blue500} />}
-            primaryText= //doc.text
-            secondaryText= // doc.date
-          />)}
-          <ListItem
-            leftAvatar={<Avatar icon={<ActionAssignment />} backgroundColor={blue500} />}
-            primaryText="Vacation itinerary"
-            secondaryText="Jan 20, 2018"
-          />
-          <ListItem
-            leftAvatar={<Avatar icon={<ActionAssignment />} backgroundColor={blue500} />}
-            primaryText="Europe Trip"
-            secondaryText="March 10, 2018"
-          />
-
-        </List>
-      </div>
-    );
+          {this.state.documents.map((doc) =>
+            <ListItem
+              leftAvatar={<Avatar icon={<ActionAssignment />} backgroundColor={blue500}/>}
+              primaryText = {doc.title}
+              secondaryText = {new Date(doc.created).toString().slice(0,15)}
+            />)}
+          </List>
+        </div>
+      );
+    }
   }
-}
 
-export default ViewDocs;
+  export default ViewDocs;

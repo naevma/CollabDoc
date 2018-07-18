@@ -9,7 +9,8 @@ import RaisedButton from 'material-ui/RaisedButton';
 class CreateDoc extends React.Component {
   constructor(props) {
     super(props);
-    this.state={
+    this.state = {
+      currentPage: 'createDoc',
       title: '',
       password:''
     }
@@ -32,33 +33,38 @@ class CreateDoc extends React.Component {
     const {title, password} = this.state;
     console.log("title", title)
 
-    fetch('http://373431e5.ngrok.io/createdoc', {
+    fetch('http://3d693881.ngrok.io/createdoc', {
       method: 'POST',
       headers: {
         "Content-Type": "application/json"
       },
+      credentials: "same-origin",
       body: JSON.stringify({
         title,
-        password
+        //password
       })
     })
     .then((response) => {
-      if (response.status === 200) {
+      console.log('RESPONSE', response)
+      if (response.status) {
         console.log("Success!")
+        return response.text()
       }
       else {
         // error
         console.log('error')
       }
     })
-    // .then((responseJson) => {
-    //   if (responseJson.success){
-    //     // navigate to draft js or the editor
-    //   }
-    //   console.log("response JSON", responseJson)
-    // })
+    .then((responseJson) => {
+      this.props.redirect('View')
+      if (responseJson.success){
+        // navigate to draft js or the editor
+      }
+      console.log("response JSON", responseJson)
+    })
     .catch((err) => {
       /* do something if there was an error with fetching */
+      console.log(err);
     });
   }
 
@@ -77,17 +83,15 @@ class CreateDoc extends React.Component {
 
         </div>
 
-        <div><TextField
+        {/* <div><TextField
           hintText = "Password"
           floatingLabelText = "Password"
           type = "password"
           value = {this.state.password}
           onChange={(event) => this.onChangePassword(event)}
 
-        /></div>
-        <div
-          style={{ textAlign: 'center'}}
-          >
+        /></div> */}
+        <div style={{ textAlign: 'center'}}>
 
             <RaisedButton
               onClick={() => this.onClick()}
