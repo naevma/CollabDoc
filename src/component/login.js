@@ -59,7 +59,7 @@ export default class Login extends React.Component {
 
       const {username, password} = this.state;
 
-      fetch('http://46a1cca4.ngrok.io/login', {
+      fetch('http://7382e430.ngrok.io/login', {
         method: 'POST',
         headers: {
           "Content-Type": "application/json"
