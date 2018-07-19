@@ -19,6 +19,7 @@ class Draft extends React.Component {
     super(props);
     this.state = {
       editorState: EditorState.createEmpty(),
+      currentPage: 'draft',
       online: [],
       title: 'Untitled Doc',
       contentHistory: [],
@@ -96,39 +97,47 @@ class Draft extends React.Component {
   }
 
   onChange(editorState) {
-    this.setState({editorState: editorState, saved: false})
-    const selection = editorState.getSelection()
-
-    if (this.previousHighlight) {
-      editorState = EditorState.acceptSelection(editorState, this.previousHighlight)
-      editorState = RichUtils.toggleInlineStyle(editorState)
-      editorState = EditorState.acceptSelection(editorState, selection)
-      this.previousHighlight = null;
-    }
-
-    if (selection.getStartOffset() === selection.getEndOffset()) {
-      if (selection._map._root.entries[5][1]) {
-        const windowSelection = window.getSelection();
-        if(windowSelection.rangeCount> 0) {
-          const range = windowSelection.getRangeAt(0);
-          const clientRects = range.getClientRects();
-
-          if(clientRects.length >0) {
-            const rects = clientRects[0];
-            const {top, left, bottom} = rexts;
-            const loc = {top: rects.top, bottom: rects.bottom, left: rects.left}
-            const data = {incomingSelectionObj: selection, loc: loc}
-            this.socket.emit('cursorMove', data)
-          }
-        }
-      }
-    } else {
-      editorState = RichUtils.toggleInlineStyle(editorState);
-      this.previousHighlight = editorState.getSelection();
-    }
-
-    var currentContent = convertToRaw(editorState.getCurrentContent());
-    this.socket.emit('newContent', JSON.stringify(currentContent))
+    this.setState({editorState}, () => {
+      this.props.socket.emit('syncDocument', {
+        docId: this.state.doc._id,
+        rawState: convertToRaw(editorState.getCurrentContent()),
+      });
+    })
+    // console.log('STATE', editorState)
+    // console.log('saved', this.state.saved)
+    // this.setState({editorState: editorState, saved: false})
+    // const selection = editorState.getSelection()
+    //
+    // if (this.previousHighlight) {
+    //   editorState = EditorState.acceptSelection(editorState, this.previousHighlight)
+    //   editorState = RichUtils.toggleInlineStyle(editorState)
+    //   editorState = EditorState.acceptSelection(editorState, selection)
+    //   this.previousHighlight = null;
+    // }
+    //
+    // if (selection.getStartOffset() === selection.getEndOffset()) {
+    //   if (selection._map._root.entries[5][1]) {
+    //     const windowSelection = window.getSelection();
+    //     if(windowSelection.rangeCount> 0) {
+    //       const range = windowSelection.getRangeAt(0);
+    //       const clientRects = range.getClientRects();
+    //
+    //       if(clientRects.length >0) {
+    //         const rects = clientRects[0];
+    //         const {top, left, bottom} = rexts;
+    //         const loc = {top: rects.top, bottom: rects.bottom, left: rects.left}
+    //         const data = {incomingSelectionObj: selection, loc: loc}
+    //         this.socket.emit('cursorMove', data)
+    //       }
+    //     }
+    //   }
+    // } else {
+    //   editorState = RichUtils.toggleInlineStyle(editorState);
+    //   this.previousHighlight = editorState.getSelection();
+    // }
+    //
+    // var currentContent = convertToRaw(editorState.getCurrentContent());
+    // this.socket.emit('newContent', JSON.stringify(currentContent))
   }
 
   componentWillUnmount() {
@@ -259,19 +268,64 @@ class Draft extends React.Component {
   }
 
   _onSave() {
-    var newContent = JSON.stringify(convertToRaw(this.state.editorState.getCurrentContent()));
+    // var newContent = JSON.stringify(convertToRaw(this.state.editorState.getCurrentContent()));
     var contentState = convertToRaw(this.state.editorState.getCurrentContent());
-    contentState = JSON.stringify(contentState);
     var newContentHistory = this.state.contentHistory.slice();
     newContentHistory.push(contentState);
     this.setState({contentHistory: newContentHistory}, () => {
-    this.socket.emit('newContentHistory', this.state.contentHistory)
+    // this.socket.emit('newContentHistory', this.state.contentHistory)
     })
     var newTitle = this.state.title;
     var rawContent = this.state.editorState.getCurrentContent();
-    var currentDocument = Object.assign({}, {content: rawContent})
-    this.setState({saved: true, currentDocument: currentDocument, title: newTitle, editorState: EditorState.createWithContent(rawContent)})
-    console.log(this.state.saved)
+    //var currentDocument = Object.assign({}, {content: rawContent})
+    this.setState({saved: true, title: newTitle, editorState: EditorState.createWithContent(rawContent)}, () => {
+      console.log(this.state.saved)
+      console.log('editor', this.state.editorState)
+    })
+
+
+
+    fetch('http://46a1cca4.ngrok.io/savedoc', {
+      method: 'POST',
+      headers: {
+        "Content-Type": "application/json"
+      },
+      credentials: "same-origin",
+      body: JSON.stringify({
+        documentID: this.props.id,
+        editorState: contentState,
+        saveDates: new Date()
+      })
+    })
+    .then((response) => {
+      console.log("response", response)
+      if (response.status === 200) {
+        return response.json()
+      }
+      else {
+        console.log("error");
+      }
+    })
+    .then((resp) => {
+      console.log(resp.success);
+    })
+    // .then((responseJson) => {
+    //   console.log('response 2', responseJson)
+    //   if (responseJson.success){
+    //     this.props.redirect('Content')
+    //   }
+    //   else {
+    //     console.log("ERROR", responseJson.error)
+    //   }
+    // })
+    .catch((err) => {
+      console.log("ANOTHA ERR", err)
+      /* do something if there was an error with fetching */
+    });
+  }
+
+  viewHistory() {
+
   }
 
   onTitleEdit(event) {
@@ -288,6 +342,27 @@ class Draft extends React.Component {
     return 'not-handled'
   }
 
+  componentDidMount() {
+    console.log("contentHistory", this.props.contentHistory)
+    if (this.props.contentHistory.length) {
+      console.log("contentHistory1", "hi")
+
+      var newArr = this.props.contentHistory.slice();
+      let lastDoc = newArr[newArr.length - 1];
+      if (typeof lastDoc === "string") {
+        lastDoc = JSON.parse(lastDoc);
+      }
+      if (lastDoc.entityMap == null) {
+        lastDoc.entityMap = {};
+      }
+      console.log(newArr)
+      this.setState({
+        contentHistory: this.props.contentHistory,
+        editorState: EditorState.createWithContent(convertFromRaw(lastDoc))
+      })
+    }
+  }
+
   render() {
     const {editorState} = this.state;
     return (
@@ -296,7 +371,7 @@ class Draft extends React.Component {
         <h1>Document Editor</h1>
       </div>
     <TextField id="text-field-controlled"
-      value={this.state.title}
+      value={this.props.title}
       onChange={this.onTitleEdit.bind(this)} />
       <div>
       <div style={styles.toolbar}>
@@ -367,6 +442,10 @@ class Draft extends React.Component {
         <RaisedButton
           label={this.state.saved ? "Saved" : "Save"}
           onClick= {this._onSave.bind(this)}>
+        </RaisedButton>
+        <RaisedButton
+          label= "View History"
+          onClick= {this.viewHistory.bind(this)}>
         </RaisedButton>
       </div>
       </div>
