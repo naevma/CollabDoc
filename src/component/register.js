@@ -74,7 +74,7 @@ export default class Register extends React.Component {
     else if (this.state.username && this.state.password && this.state.passwordRepeat) {
       const {username, password, passwordRepeat} = this.state;
 
-      fetch('http://46a1cca4.ngrok.io/signup', {
+      fetch('http://7382e430.ngrok.io/signup', {
         method: 'POST',
         headers: {
           "Content-Type": "application/json"

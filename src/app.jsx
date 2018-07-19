@@ -6,6 +6,7 @@ import AppBar from 'material-ui/AppBar';
 import Drawer from 'material-ui/Drawer';
 import MenuItem from 'material-ui/MenuItem';
 import RaisedButton from 'material-ui/RaisedButton';
+import io from 'socket.io-client';
 
 import Draft from './component/draft';
 import Login from './component/login'
@@ -21,8 +22,15 @@ export default class App extends React.Component {
     this.state = {
       currentPage: 'Content',
       open: false,
-      show: null
+      show: null,
+      connecting: true
     }
+  }
+
+  componentDidMount() {
+    this.socket = io('http://7382e430.ngrok.io')
+    this.socket.on('connect', () => this.setState({connecting: null}))
+    this.socket.on('disconnect', () => this.setState({connecting: true}))
   }
 
   handleToggle = () => {
@@ -68,7 +76,7 @@ export default class App extends React.Component {
       {this.state.currentPage === 'Login' ?  <Login redirect = {this.redirect} /> : null}
       {this.state.currentPage === 'Register' ?  <Register redirect = {this.redirect}/>  : null}
       {this.state.currentPage === 'Document' ? <Document redirect = {this.redirect} /> : null}
-      {this.state.currentPage === 'Content' ? <Content redirect = {this.redirect}/> : null}
+      {this.state.currentPage === 'Content' ? <Content redirect = {this.redirect} socket = {this.socket}/> : null}
       {/* {this.state.currentPage === 'viewDoc' ?  <Register redirect = {this.redirect}/>  : null}
       {this.state.currentPage === 'addDoc' ? <Document redirect = {this.redirect} /> : null}
       {this.state.currentPage === 'createDoc' ? <Content redirect = {this.redirect}/> : null} */}

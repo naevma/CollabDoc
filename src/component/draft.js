@@ -11,9 +11,6 @@ import SelectField from 'material-ui/SelectField';
 import _ from 'underscore';
 import io from 'socket.io-client'
 
-const baseURL = 'http://localhost:3000'
-
-
 class Draft extends React.Component {
   constructor(props) {
     super(props);
@@ -29,66 +26,10 @@ class Draft extends React.Component {
       autosave: false,
       online: []
     };
-    this.onChange = (editorState) => this.setState({editorState});
+    // this.onChange = (editorState) => this.setState({editorState});
     this.handleKeyCommand=this.handleKeyCommand.bind(this);
     this.toggleColor = (toggledColor) => this._toggleColor(toggledColor);
 
-    this.previousHighlight = null;
-
-    this.socket = io.connect(baseURL);
-
-    this.socket.on('welcome', ({doc}) => {
-      console.log('User')
-    })
-
-    this.socket.on('userjoined', () => {
-      console.log('user has joined the room')
-    })
-
-    this.socket.on('onlineUpdated', ({online}) => {
-      console.log('onlineUpdated', online);
-      this.setState({online:online}, () => {
-        var userIndex = _.findIndex(this.state.online, function(user){
-          return user._id === props.store.get('user')._id;
-        })
-      })
-    })
-
-    this.socket.on('receivedNewContent', stringifiedContent => {
-      console.log('new content, updating state');
-      const contentState = convertFromRaw(JSON.parse(stringifiedContent))
-      const newEditorState = EditorState.createWithContent(contentState)
-      this.setState({editorState: newEditorState})
-    })
-
-    this.socket.on('receivedNewContentHistory', contentHistory => {
-      console.log('recieved new content history')
-      contentHistory = uniq(contentHistory);
-      this.setState({contentHistory: contentHistory}, () => {
-        console.log('received new content history', this.state.contentHistory)
-      })
-    })
-
-    this.socket.on('receiveNewCursor', (data) => {
-      const incomingSelectionObj = data.incomingSelectionObj
-      const loc = data.loc;
-      let editorState = this.state.editorState;
-      const originalEditorState = editorState;
-      const originalSelection = this.state.editorState.getSelection();
-      const incomingSelectionState = originalSelection.merge(incomingSelectionObj);
-      const temporaryEditorState = EditorState.forceSelection(originalEditorState, incomingSelectionState)
-
-      if(temporaryEditorState) {
-        this.setState({editorState: temporaryEditorState}, function() {
-          if (loc && loc.top && loc.bottom && loc.left) {
-            this.setState({editorState: originalEditorState, top:loc.top, left: loc.left, height: loc.bottom - loc.top})
-          }
-        })
-      } else {
-        console.log('temporary state undefined')
-      }
-    })
-    this.socket.emit('joined')
   }
 
   autoSave() {
@@ -96,54 +37,20 @@ class Draft extends React.Component {
     this.setState({autosave: !this.state.autosave})
   }
 
-  onChange(editorState) {
+  onChange = (editorState) => {
+    const {socket} = this.props
     this.setState({editorState}, () => {
-      this.props.socket.emit('syncDocument', {
-        docId: this.state.doc._id,
+      socket.emit('syncDocument', {
+        _id: this.props.id,
         rawState: convertToRaw(editorState.getCurrentContent()),
       });
     })
-    // console.log('STATE', editorState)
-    // console.log('saved', this.state.saved)
-    // this.setState({editorState: editorState, saved: false})
-    // const selection = editorState.getSelection()
-    //
-    // if (this.previousHighlight) {
-    //   editorState = EditorState.acceptSelection(editorState, this.previousHighlight)
-    //   editorState = RichUtils.toggleInlineStyle(editorState)
-    //   editorState = EditorState.acceptSelection(editorState, selection)
-    //   this.previousHighlight = null;
-    // }
-    //
-    // if (selection.getStartOffset() === selection.getEndOffset()) {
-    //   if (selection._map._root.entries[5][1]) {
-    //     const windowSelection = window.getSelection();
-    //     if(windowSelection.rangeCount> 0) {
-    //       const range = windowSelection.getRangeAt(0);
-    //       const clientRects = range.getClientRects();
-    //
-    //       if(clientRects.length >0) {
-    //         const rects = clientRects[0];
-    //         const {top, left, bottom} = rexts;
-    //         const loc = {top: rects.top, bottom: rects.bottom, left: rects.left}
-    //         const data = {incomingSelectionObj: selection, loc: loc}
-    //         this.socket.emit('cursorMove', data)
-    //       }
-    //     }
-    //   }
-    // } else {
-    //   editorState = RichUtils.toggleInlineStyle(editorState);
-    //   this.previousHighlight = editorState.getSelection();
-    // }
-    //
-    // var currentContent = convertToRaw(editorState.getCurrentContent());
-    // this.socket.emit('newContent', JSON.stringify(currentContent))
   }
-
-  componentWillUnmount() {
-    this.socket.emit('disconnect');
-    this.socket.disconnect();
-  }
+  //
+  // componentWillUnmount() {
+  //   this.socket.emit('disconnect');
+  //   this.socket.disconnect();
+  // }
 
   handleClick = event => {
     this.setState({anchorE1: event.currentTarget})
@@ -252,8 +159,6 @@ class Draft extends React.Component {
     this.onChange(nextEditorState);
   }
 
-
-
   myBlockStyleFn(contentBlock) {
     const type = contentBlock.getType();
     if (type === 'left') {
@@ -283,9 +188,7 @@ class Draft extends React.Component {
       console.log('editor', this.state.editorState)
     })
 
-
-
-    fetch('http://46a1cca4.ngrok.io/savedoc', {
+    fetch('http://7382e430.ngrok.io/savedoc', {
       method: 'POST',
       headers: {
         "Content-Type": "application/json"
@@ -343,6 +246,13 @@ class Draft extends React.Component {
   }
 
   componentDidMount() {
+    const {socket} = this.props
+    socket.emit('openDoc', {
+      _id: this.props.id
+    })
+
+    socket.on('syncDocument', this.remoteStateChange)
+
     console.log("contentHistory", this.props.contentHistory)
     if (this.props.contentHistory.length) {
       console.log("contentHistory1", "hi")
@@ -361,6 +271,11 @@ class Draft extends React.Component {
         editorState: EditorState.createWithContent(convertFromRaw(lastDoc))
       })
     }
+  }
+
+  remoteStateChange = (res) => {
+    console.log('whatsupppp')
+    this.setState({editorState: EditorState.createWithContent(convertFromRaw(res.rawState))})
   }
 
   render() {
