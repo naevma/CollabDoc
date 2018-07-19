@@ -33,7 +33,7 @@ class CreateDoc extends React.Component {
     const {title, password} = this.state;
     console.log("title", title)
 
-    fetch('http://3d693881.ngrok.io/createdoc', {
+    fetch('http://46a1cca4.ngrok.io/createdoc', {
       method: 'POST',
       headers: {
         "Content-Type": "application/json"
@@ -56,6 +56,7 @@ class CreateDoc extends React.Component {
       }
     })
     .then((responseJson) => {
+      console.log("wtf", responseJson)
       this.props.redirect('View')
       if (responseJson.success){
         // navigate to draft js or the editor
@@ -64,7 +65,7 @@ class CreateDoc extends React.Component {
     })
     .catch((err) => {
       /* do something if there was an error with fetching */
-      console.log(err);
+      console.log("error", err);
     });
   }
 

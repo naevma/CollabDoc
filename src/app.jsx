@@ -51,6 +51,8 @@ export default class App extends React.Component {
 
                 <AppBar title = "Menu" showMenuIconButton={false} />
                 <MenuItem onClick = {() => this.redirect('Home')}>Home</MenuItem>
+                <MenuItem onClick = {() => this.redirect('Login')}>Login</MenuItem>
+                <MenuItem onClick = {() => this.redirect('Register')}>Register</MenuItem>
               </Drawer>
 
               <div className = "text-center" style = {{position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)'}}>
