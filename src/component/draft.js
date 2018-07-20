@@ -31,17 +31,15 @@ class Draft extends React.Component {
       online: [],
       historyArr: [],
       search: '',
+      highlightStart: 0,
+      highlightStop: 0,
       saveHistory: false
     };
     // this.onChange = (editorState) => this.setState({editorState});
     this.handleKeyCommand=this.handleKeyCommand.bind(this);
     this.toggleColor = (toggledColor) => this._toggleColor(toggledColor);
-
-  }
-
-  autoSave() {
-    setInterval(this.onSave.bind(this), 30000);
-    this.setState({autosave: !this.state.autosave})
+    this.previousHighlight = null;
+    this.interval = setInterval(this._onSave.bind(this), 10000)
   }
 
   onChange = (editorState) => {
@@ -52,12 +50,23 @@ class Draft extends React.Component {
         rawState: convertToRaw(editorState.getCurrentContent()),
       });
     })
+    const selection = editorState.getSelection();
+    console.log('highlight', selection.anchorOffset, selection.focusOffset)
+    this.setState({highlightStart: selection.anchorOffset, highlightStop: selection.focusOffset}, () => {
+      socket.emit('highlight', {
+        _id: this.props.id,
+        start: selection.anchorOffset,
+        stop: selection.focusOffset
+      })
+    })
   }
-  //
-  // componentWillUnmount() {
-  //   this.socket.emit('disconnect');
-  //   this.socket.disconnect();
-  // }
+
+
+  componentWillUnmount() {
+    this.socket.emit('disconnect');
+    this.socket.close();
+    clearInterval(this.interval);
+  }
 
   SearchHighlight = (props) => (
     <span className="search-highlight">{props.children}</span>
@@ -311,12 +320,14 @@ class Draft extends React.Component {
   }
 
   componentDidMount() {
+
     const {socket} = this.props
     socket.emit('openDoc', {
       _id: this.props.id
     })
     console.log("this.props.save", this.props.saveDates)
     socket.on('syncDocument', this.remoteStateChange)
+    socket.on('highlight', this.remoteStateChangeHigh)
 
     console.log("contentHistory", this.props.contentHistory)
     if (this.props.contentHistory.length) {
@@ -350,6 +361,13 @@ class Draft extends React.Component {
   remoteStateChange = (res) => {
     console.log('whatsupppp')
     this.setState({editorState: EditorState.createWithContent(convertFromRaw(res.rawState))})
+  }
+
+  remoteStateChangeHigh = (res) => {
+    console.log('high', res)
+    this.setState({highlightStart: res.start, highlightStop: res.stop}, () => {
+      console.log(this.state.highlightStart, this.state.highlightStop)
+    })
   }
 
   render() {
@@ -570,29 +588,6 @@ class Draft extends React.Component {
     }
   }
 
-
-  class StyleButton extends React.Component {
-    constructor(props) {
-      super(props);
-      this.onToggle = (e) => {
-        e.preventDefault();
-        this.props.onToggle(this.props.style);
-      };
-    }
-    render() {
-      let style;
-      if (this.props.active) {
-        style = {...styles.styleButton, ...colorStyleMap[this.props.style]};
-      } else {
-        style = styles.styleButton;
-      }
-      return (
-        <span style={style} onMouseDown={this.onToggle}>
-          {this.props.label}
-        </span>
-      );
-    }
-  }
 
   var COLORS = [
     {label: 'Red', style: 'red'},
