@@ -20,6 +20,8 @@ import randomColor from 'randomcolor';
 
 class Draft extends React.Component {
   constructor(props) {
+    var color = randomColor().toString();
+
     super(props);
     this.state = {
       editorState: EditorState.createEmpty(),
@@ -36,7 +38,7 @@ class Draft extends React.Component {
       search: '',
       highlightStart: 0,
       highlightStop:0,
-      randomColor:''
+      randomColor:color
     };
     // this.onChange = (editorState) => this.setState({editorState});
     this.handleKeyCommand=this.handleKeyCommand.bind(this);
@@ -55,13 +57,25 @@ class Draft extends React.Component {
     })
     const selection = editorState.getSelection();
     console.log('highlight', selection.anchorOffset, selection.focusOffset)
-    this.setState({highlightStart: selection.anchorOffset, highlightStop: selection.focusOffset}, () => {
-      socket.emit('highlight', {
-        _id: this.props.id,
-        start: selection.anchorOffset,
-        stop: selection.focusOffset
+    var start_high = selection.focusOffset
+    var stop_high = selection.anchorOffset
+    if(start_high < stop_high){
+      this.setState({highlightStart: start_high, highlightStop: stop_high}, () => {
+        socket.emit('highlight', {
+          _id: this.props.id,
+          start: start_high,
+          stop: stop_high
+        })
       })
-    })
+    }else{
+      this.setState({highlightStart: stop_high, highlightStop: start_high}, () => {
+        socket.emit('highlight', {
+          _id: this.props.id,
+          start: stop_high,
+          stop: start_high
+        })
+      })
+    }
   }
 
 
@@ -316,11 +330,12 @@ onChangeSearch = (e) => {
     return 'not-handled'
   }
 
+
+
   componentDidMount() {
 
 
-  var color = randomColor();
-  console.log('COLOR',color)
+
 
 
     const {socket} = this.props
@@ -355,10 +370,10 @@ onChangeSearch = (e) => {
       this.setState({
         contentHistory: this.props.contentHistory,
         editorState: EditorState.createWithContent(convertFromRaw(lastDoc)),
-        historyArr:  newArr,
-        randomColor:color
+        historyArr:  newArr
       })
     }
+
   }
 
   remoteStateChange = (res) => {
@@ -366,14 +381,72 @@ onChangeSearch = (e) => {
     this.setState({editorState: EditorState.createWithContent(convertFromRaw(res.rawState))})
   }
 
-  remoteStateChangeHigh = (res) => {
-    console.log('high', res)
-    this.setState({highlightStart: res.start, highlightStop: res.stop}, () => {
-      console.log(this.state.highlightStart, this.state.highlightStop)
-    })
+  HighHighlight = (props) => {
+    return <span style={{backgroundColor: this.state.randomColor, color: 'black'}} >{props.children}</span>
+    //<span style={{color: 'black', borderLeft: '1px solid blue'}} >{props.children}</span>
   }
 
+
+
+
+BorderHighlight = (props) => (
+
+ <span style={{color: 'black', borderRight: '1px solid blue'}} >{props.children}</span>
+
+);
+
+
+ generateDecoratorHigh = () => {
+ const regex = new RegExp('lol', 'g');
+ return new CompositeDecorator([{
+   strategy: (contentBlock, callback) => {
+     console.log('got here, thats cool')
+     this.state.highlightStart !== this.state.highlightStop ? this.findWithRegexHigh(regex, contentBlock, callback) : this.findWithRegexBorder(regex, contentBlock, callback);
+   },
+   component: this.state.highlightStart !== this.state.highlightStop ? this.HighHighlight : this.BorderHighlight,
+ }])
+};
+
+generateDecoratorBorder = () => {
+const regex = new RegExp('lol', 'g');
+return new CompositeDecorator([{
+  strategy: (contentBlock, callback) => {
+    console.log('got here, thats cool')
+    this.findWithRegexBorder(regex, contentBlock, callback);
+  },
+  component: this.BorderHighlight,
+}])
+};
+
+
+findWithRegexHigh = (regex, contentBlock, callback) => {
+ console.log('in reg high start', this.state.highlightStart)
+ console.log('in reg high stop', this.state.highlightStop)
+
+ callback(this.state.highlightStart, this.state.highlightStop );
+ // callback(this.state.highlightStart, this.state.highlightStop+1 );
+};
+
+findWithRegexBorder = (regex, contentBlock, callback) => {
+ console.log('in reg border start', this.state.highlightStart)
+ console.log('in reg border stop', this.state.highlightStop)
+ if(this.state.hightlightStart === contentBlock.getLength()){
+
+ }
+ callback(this.state.hightlightStart === 0 ? this.state.highlightStart : this.state.highlightStart - 1, this.state.highlightStop );
+};
+
+ remoteStateChangeHigh = (res) => {
+   console.log('high', res)
+   this.setState({highlightStart: res.start, highlightStop: res.stop}, () => {
+     console.log(this.state.highlightStart, this.state.highlightStop)
+   })
+  this.setState({editorState: EditorState.set(this.state.editorState, { decorator: this.generateDecoratorHigh() })})
+
+ }
+
   render() {
+    console.log('HEYY',this.state)
     const {editorState} = this.state;
     return (
       <MuiThemeProvider muiTheme={muiTheme} >
