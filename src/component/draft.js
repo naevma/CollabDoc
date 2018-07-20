@@ -111,7 +111,7 @@ class Draft extends React.Component {
         console.log('temportaray state undefined wtf');
       }
     })
-    
+
     var start_high = selection.focusOffset
     var stop_high = selection.anchorOffset
     if(start_high < stop_high){
@@ -505,7 +505,7 @@ findWithRegexBorder = (regex, contentBlock, callback) => {
     const {editorState} = this.state;
     return (
       <MuiThemeProvider muiTheme={muiTheme} >
-      <div>
+      <div style={{ height: '100vh'}}>
         <AppBar title={this.props.title} onLeftIconButtonClick = {this.handleToggle} />
         <Drawer
           docked = {false}
@@ -524,7 +524,7 @@ findWithRegexBorder = (regex, contentBlock, callback) => {
               hintText="Find in document"
               onChange={this.onChangeSearch} />
           </div>
-          <div style={{border: '1px solid black', paddingBottom: 10}}>
+          <div style={{border: '1px solid black', paddingBottom: 10, height: '50vh'}}>
             <div style={styles.toolbar}>
             <div style = {{display: 'inline-block', position: 'relative', top: '11px'}}>
             <SelectField
@@ -710,7 +710,6 @@ const styles = {
     width: '100%',
     fontSize: 16,
     marginTop: 20,
-    minHeight: 400,
     paddingTop: 20,
   },
   controls: {
