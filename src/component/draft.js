@@ -34,7 +34,6 @@ class Draft extends React.Component {
       online: [],
       historyArr: [],
       search: '',
-      userColor: 'black',
       highlightStart: 0,
       highlightStop:0,
       randomColor:''
@@ -43,12 +42,7 @@ class Draft extends React.Component {
     this.handleKeyCommand=this.handleKeyCommand.bind(this);
     this.toggleColor = (toggledColor) => this._toggleColor(toggledColor);
     this.previousHighlight = null;
-  }
-
-  autoSave() {
-    setInterval(this.onSave.bind(this), 30000);
-    this.setState({autosave: !this.state.autosave})
-    console.log('saved!')
+    this.interval = setInterval(this._onSave.bind(this), 10000)
   }
 
   onChange = (editorState) => {
@@ -69,11 +63,13 @@ class Draft extends React.Component {
       })
     })
   }
-  //
-  // componentWillUnmount() {
-  //   this.socket.emit('disconnect');
-  //   this.socket.disconnect();
-  // }
+
+
+  componentWillUnmount() {
+    this.socket.emit('disconnect');
+    this.socket.close();
+    clearInterval(this.interval);
+  }
 
   SearchHighlight = (props) => (
   <span className="search-highlight">{props.children}</span>
@@ -320,17 +316,12 @@ onChangeSearch = (e) => {
     return 'not-handled'
   }
 
-  randomColor = () => {
-    var randColor = 'rgb(' + (Math.floor(Math.random() * 256)) + ',' + (Math.floor(Math.random() * 256)) + ',' + (Math.floor(Math.random() * 256)) + ')';
-    this.setState({userColor: randColor}, () => {
-      console.log(this.state.userColor)
-    })
-  }
-
   componentDidMount() {
+
 
   var color = randomColor();
   console.log('COLOR',color)
+
 
     const {socket} = this.props
     socket.emit('openDoc', {
@@ -469,7 +460,6 @@ onChangeSearch = (e) => {
                 textAlignment={'right'}
                 blockStyleFn = {this.myBlockStyleFn}
                 ref={(ref) => this.editor = ref}
-                autoSave={this.autoSave}
               />
             </div>
               <RaisedButton
