@@ -13,6 +13,7 @@ import {Toolbar, ToolbarTitle} from 'material-ui/Toolbar'
 import ViewDoc from './viewDocs';
 import CreateDoc from './createDoc';
 import AddDoc from './addDoc';
+import Draft from './draft';
 
 const paperStyle = {
   height: '85%',
@@ -28,7 +29,8 @@ export default class Content extends React.Component {
     this.state = {
       currentPage: 'Content',
       open: false,
-      show: null
+      show: null,
+      data: {}
     }
   }
 
@@ -40,26 +42,37 @@ export default class Content extends React.Component {
 
   showView = () => {
     this.setState({
-      show: 'View'
+      show: 'View',
+      open: !this.state.open
     })
   }
 
   showCreate = () => {
     this.setState({
-      show: 'Create'
+      show: 'Create',
+      open: !this.state.open
     })
   }
 
   showAdd = () => {
     this.setState({
-      show: 'Add'
+      show: 'Add',
+      open: !this.state.open
     })
   }
 
-  redirect = (page) => {
-    this.setState({
-      show: page
-    })
+  redirect = (page, data) => {
+    if (this.state.show === "View") {
+      this.setState({
+        currentPage: page,
+        data
+      })
+    }
+    else {
+      this.setState({
+        show: page
+      })
+    }
   }
 
   render() {
@@ -78,10 +91,10 @@ export default class Content extends React.Component {
     //     content = <h1>Waiting</h1>
     // }
     return (
-      <div className = "text-center">
+      <div>
         {this.state.currentPage === "Content" ? <MuiThemeProvider muiTheme={muiTheme}><div>
           <AppBar
-            title="Content"
+            title="My Documents"
             onLeftIconButtonClick = {this.handleToggle}
           />
           <Drawer
@@ -90,21 +103,23 @@ export default class Content extends React.Component {
             open = {this.state.open}
             onRequestChange = {(open) => this.setState({open})}>
 
+            <div className = "text-center">
             <AppBar title = "Menu" showMenuIconButton={false}/>
-            <MenuItem onClick = {() => this.props.redirect('Home')}>Home</MenuItem>
+            <MenuItem onClick = {() => this.props.redirect("Home")}>Home</MenuItem>
             <MenuItem onClick = {this.showView}>View Docs</MenuItem>
-            <MenuItem onClick = {this.showCreate}>Create Docs</MenuItem>
-            <MenuItem onClick = {this.showAdd}>Add Docs</MenuItem>
+            <MenuItem onClick = {this.showCreate}>Create Doc</MenuItem>
+            <MenuItem onClick = {this.showAdd}>Add Existing Doc</MenuItem>
+            </div>
           </Drawer>
           <Paper style = {paperStyle} zDepth={5}>
-            <h1>Welcome to this beautiful, fire page.</h1>
+            <h1>Welcome to your drive!</h1>
             <p>Press the menu bar to access your amazing documents.</p>
-            {this.state.show === 'View' ?  <ViewDoc redirect = {this.redirect}/>  : null}
+            {this.state.show === 'View' ? <ViewDoc redirect = {this.redirect}/>  : null}
             {this.state.show === 'Add' ? <AddDoc redirect = {this.redirect} /> : null}
             {this.state.show === 'Create' ? <CreateDoc redirect = {this.redirect}/> : null}
           </Paper>
         </div>
-        </MuiThemeProvider> : <App />}
+      </MuiThemeProvider> : <Draft socket = {this.props.socket} title={this.state.data.title} contentHistory = {this.state.data.contentHistory} id = {this.state.data.id} saveDates = {this.state.data.savedDates}/>}
     </div>
     );
   }

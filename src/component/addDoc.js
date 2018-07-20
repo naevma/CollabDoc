@@ -33,7 +33,7 @@ class AddDoc extends React.Component {
     const {documentID, password} = this.state;
     console.log("document", documentID)
 
-    fetch('http://3d693881.ngrok.io/adddoc', {
+    fetch('http://697b5db9.ngrok.io/adddoc', {
       method: 'POST',
       headers: {
         "Content-Type": "application/json"
@@ -94,7 +94,7 @@ class AddDoc extends React.Component {
         <div style={{ textAlign: 'center'}}>
           <RaisedButton
             onClick={() => this.onClick()}
-            label="Add Doc" primary={true}  />
+            label="Add Existing Doc" primary={true}  />
           </div>
 
         </div>

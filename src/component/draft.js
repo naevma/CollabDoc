@@ -1,7 +1,10 @@
 import React from 'react';
-import {Editor, EditorState, DefaultDraftBlockRenderMap, RichUtils, ContentState, convertToRaw, convertFromRaw, Modifier} from 'draft-js';
+import {Editor, EditorState, DefaultDraftBlockRenderMap, RichUtils, ContentState, convertToRaw, convertFromRaw, Modifier, CompositeDecorator} from 'draft-js';
 import ReactDOM from 'react-dom';
 import MuiThemeProvider from 'material-ui/styles/MuiThemeProvider';
+import getMuiTheme from 'material-ui/styles/getMuiTheme';
+import AppBar from 'material-ui/AppBar';
+import Drawer from 'material-ui/Drawer';
 import RaisedButton from 'material-ui/RaisedButton';
 import DropDownMenu from 'material-ui/DropDownMenu';
 import Menu from 'material-ui/Menu';
@@ -11,14 +14,12 @@ import SelectField from 'material-ui/SelectField';
 import _ from 'underscore';
 import io from 'socket.io-client'
 
-const baseURL = 'http://localhost:3000'
-
-
 class Draft extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
       editorState: EditorState.createEmpty(),
+      currentPage: 'draft',
       online: [],
       title: 'Untitled Doc',
       contentHistory: [],
@@ -26,115 +27,82 @@ class Draft extends React.Component {
       collaborators: [],
       currentDocument: {},
       autosave: false,
-      online: []
+      online: [],
+      historyArr: [],
+      search: '',
+      userColor: 'black',
+      highlightStart: 0,
+      highlightStop:0
     };
-    this.onChange = (editorState) => this.setState({editorState});
+    // this.onChange = (editorState) => this.setState({editorState});
     this.handleKeyCommand=this.handleKeyCommand.bind(this);
     this.toggleColor = (toggledColor) => this._toggleColor(toggledColor);
-
     this.previousHighlight = null;
-
-    this.socket = io.connect(baseURL);
-
-    this.socket.on('welcome', ({doc}) => {
-      console.log('User')
-    })
-
-    this.socket.on('userjoined', () => {
-      console.log('user has joined the room')
-    })
-
-    this.socket.on('onlineUpdated', ({online}) => {
-      console.log('onlineUpdated', online);
-      this.setState({online:online}, () => {
-        var userIndex = _.findIndex(this.state.online, function(user){
-          return user._id === props.store.get('user')._id;
-        })
-      })
-    })
-
-    this.socket.on('receivedNewContent', stringifiedContent => {
-      console.log('new content, updating state');
-      const contentState = convertFromRaw(JSON.parse(stringifiedContent))
-      const newEditorState = EditorState.createWithContent(contentState)
-      this.setState({editorState: newEditorState})
-    })
-
-    this.socket.on('receivedNewContentHistory', contentHistory => {
-      console.log('recieved new content history')
-      contentHistory = uniq(contentHistory);
-      this.setState({contentHistory: contentHistory}, () => {
-        console.log('received new content history', this.state.contentHistory)
-      })
-    })
-
-    this.socket.on('receiveNewCursor', (data) => {
-      const incomingSelectionObj = data.incomingSelectionObj
-      const loc = data.loc;
-      let editorState = this.state.editorState;
-      const originalEditorState = editorState;
-      const originalSelection = this.state.editorState.getSelection();
-      const incomingSelectionState = originalSelection.merge(incomingSelectionObj);
-      const temporaryEditorState = EditorState.forceSelection(originalEditorState, incomingSelectionState)
-
-      if(temporaryEditorState) {
-        this.setState({editorState: temporaryEditorState}, function() {
-          if (loc && loc.top && loc.bottom && loc.left) {
-            this.setState({editorState: originalEditorState, top:loc.top, left: loc.left, height: loc.bottom - loc.top})
-          }
-        })
-      } else {
-        console.log('temporary state undefined')
-      }
-    })
-    this.socket.emit('joined')
   }
 
   autoSave() {
     setInterval(this.onSave.bind(this), 30000);
     this.setState({autosave: !this.state.autosave})
+    console.log('saved!')
   }
 
-  onChange(editorState) {
-    this.setState({editorState: editorState, saved: false})
-    const selection = editorState.getSelection()
+  onChange = (editorState) => {
+    const {socket} = this.props
+    this.setState({editorState}, () => {
+      socket.emit('syncDocument', {
+        _id: this.props.id,
+        rawState: convertToRaw(editorState.getCurrentContent()),
+      });
+    })
+    const selection = editorState.getSelection();
+    console.log('highlight', selection.anchorOffset, selection.focusOffset)
+    this.setState({highlightStart: selection.anchorOffset, highlightStop: selection.focusOffset}, () => {
+      socket.emit('highlight', {
+        _id: this.props.id,
+        start: selection.anchorOffset,
+        stop: selection.focusOffset
+      })
+    })
+  }
+  //
+  // componentWillUnmount() {
+  //   this.socket.emit('disconnect');
+  //   this.socket.disconnect();
+  // }
 
-    if (this.previousHighlight) {
-      editorState = EditorState.acceptSelection(editorState, this.previousHighlight)
-      editorState = RichUtils.toggleInlineStyle(editorState)
-      editorState = EditorState.acceptSelection(editorState, selection)
-      this.previousHighlight = null;
-    }
+  SearchHighlight = (props) => (
+  <span className="search-highlight">{props.children}</span>
+);
 
-    if (selection.getStartOffset() === selection.getEndOffset()) {
-      if (selection._map._root.entries[5][1]) {
-        const windowSelection = window.getSelection();
-        if(windowSelection.rangeCount> 0) {
-          const range = windowSelection.getRangeAt(0);
-          const clientRects = range.getClientRects();
-
-          if(clientRects.length >0) {
-            const rects = clientRects[0];
-            const {top, left, bottom} = rexts;
-            const loc = {top: rects.top, bottom: rects.bottom, left: rects.left}
-            const data = {incomingSelectionObj: selection, loc: loc}
-            this.socket.emit('cursorMove', data)
-          }
-        }
+generateDecorator = (highlightTerm) => {
+  const regex = new RegExp(highlightTerm, 'g');
+  return new CompositeDecorator([{
+    strategy: (contentBlock, callback) => {
+      if (highlightTerm !== '') {
+        this.findWithRegex(regex, contentBlock, callback);
       }
-    } else {
-      editorState = RichUtils.toggleInlineStyle(editorState);
-      this.previousHighlight = editorState.getSelection();
-    }
+    },
+    component: this.SearchHighlight,
+  }])
+};
 
-    var currentContent = convertToRaw(editorState.getCurrentContent());
-    this.socket.emit('newContent', JSON.stringify(currentContent))
-  }
+findWithRegex = (regex, contentBlock, callback) => {
+const text = contentBlock.getText();
+let matchArr, start, end;
+while ((matchArr = regex.exec(text)) !== null) {
+  start = matchArr.index;
+  end = start + matchArr[0].length;
+  callback(start, end);
+}
+};
 
-  componentWillUnmount() {
-    this.socket.emit('disconnect');
-    this.socket.disconnect();
-  }
+onChangeSearch = (e) => {
+  const search = e.target.value;
+  this.setState({
+    search,
+    editorState: EditorState.set(this.state.editorState, { decorator: this.generateDecorator(search) }),
+  });
+}
 
   handleClick = event => {
     this.setState({anchorE1: event.currentTarget})
@@ -243,8 +211,6 @@ class Draft extends React.Component {
     this.onChange(nextEditorState);
   }
 
-
-
   myBlockStyleFn(contentBlock) {
     const type = contentBlock.getType();
     if (type === 'left') {
@@ -259,24 +225,85 @@ class Draft extends React.Component {
   }
 
   _onSave() {
-    var newContent = JSON.stringify(convertToRaw(this.state.editorState.getCurrentContent()));
+    // var newContent = JSON.stringify(convertToRaw(this.state.editorState.getCurrentContent()));
     var contentState = convertToRaw(this.state.editorState.getCurrentContent());
-    contentState = JSON.stringify(contentState);
     var newContentHistory = this.state.contentHistory.slice();
     newContentHistory.push(contentState);
     this.setState({contentHistory: newContentHistory}, () => {
-    this.socket.emit('newContentHistory', this.state.contentHistory)
+      // this.socket.emit('newContentHistory', this.state.contentHistory)
     })
     var newTitle = this.state.title;
     var rawContent = this.state.editorState.getCurrentContent();
-    var currentDocument = Object.assign({}, {content: rawContent})
-    this.setState({saved: true, currentDocument: currentDocument, title: newTitle, editorState: EditorState.createWithContent(rawContent)})
-    console.log(this.state.saved)
+    //var currentDocument = Object.assign({}, {content: rawContent})
+    // var array1=this.state.historyArr.slice();
+    // array1.push(contentState);
+    this.setState({saved: true, title: newTitle, editorState: EditorState.createWithContent(rawContent)}, () => {
+      console.log('fuckingwork',this.state.historyArr)
+      console.log('editor', this.state.editorState)
+    })
+
+    fetch('http://697b5db9.ngrok.io/savedoc', {
+      method: 'POST',
+      headers: {
+        "Content-Type": "application/json"
+      },
+      credentials: "same-origin",
+      body: JSON.stringify({
+        documentID: this.props.id,
+        editorState: contentState,
+        saveDates: new Date()
+      })
+    })
+    .then((response) => {
+      console.log("response", response)
+      if (response.status === 200) {
+        return response.json()
+      }
+      else {
+        console.log("error");
+      }
+    })
+    .then((resp) => {
+      console.log(resp.success);
+    })
+    // .then((responseJson) => {
+    //   console.log('response 2', responseJson)
+    //   if (responseJson.success){
+    //     this.props.redirect('Content')
+    //   }
+    //   else {
+    //     console.log("ERROR", responseJson.error)
+    //   }
+    // })
+    .catch((err) => {
+      console.log("ANOTHA ERR", err)
+      /* do something if there was an error with fetching */
+    });
+  }
+
+  viewChanges = (index) => {
+    console.log("HISTORY", this.state.historyArr);
+    var arr= this.state.historyArr.slice()
+    var specificIndex = arr[index]
+    if (typeof specificIndex === "string") {
+      specificIndex = JSON.parse(specificIndex);
+    }
+    if (specificIndex.entityMap == null) {
+      specificIndex.entityMap = {};
+    }
+  console.log("xxxxx", specificIndex)
+    this.setState({
+      editorState: EditorState.createWithContent(convertFromRaw(specificIndex))
+    })
+  }
+
+  viewHistory = () => {
+
   }
 
   onTitleEdit(event) {
     this.setState({saved: false, title: event.target.value})
-      console.log(this.state.title)
+    console.log(this.state.title)
   }
 
   handleKeyCommand(command, editorState) {
@@ -288,115 +315,205 @@ class Draft extends React.Component {
     return 'not-handled'
   }
 
+  randomColor = () => {
+    var randColor = 'rgb(' + (Math.floor(Math.random() * 256)) + ',' + (Math.floor(Math.random() * 256)) + ',' + (Math.floor(Math.random() * 256)) + ')';
+    this.setState({userColor: randColor}, () => {
+      console.log(this.state.userColor)
+    })
+  }
+
+  componentDidMount() {
+    this.randomColor();
+
+    const {socket} = this.props
+    socket.emit('openDoc', {
+      _id: this.props.id
+    })
+    console.log("this.props.save", this.props.saveDates)
+    socket.on('syncDocument', this.remoteStateChange)
+    socket.on('highlight', this.remoteStateChangeHigh)
+
+    console.log("contentHistory", this.props.contentHistory)
+    if (this.props.contentHistory.length) {
+      console.log("contentHistory1", "hi")
+
+      var newArr = this.props.contentHistory.slice();
+
+
+      // for(var i=0; i<newArr.length;i++){
+      //   allDocs.push(EditorState.createWithContent(convertFromRaw(newArr[i])))
+      // }
+
+
+      let lastDoc = newArr[newArr.length - 1];
+
+      if (typeof lastDoc === "string") {
+        lastDoc = JSON.parse(lastDoc);
+      }
+      if (lastDoc.entityMap == null) {
+        lastDoc.entityMap = {};
+      }
+      console.log(newArr)
+      this.setState({
+        contentHistory: this.props.contentHistory,
+        editorState: EditorState.createWithContent(convertFromRaw(lastDoc)),
+        historyArr:  newArr
+      })
+    }
+  }
+
+  remoteStateChange = (res) => {
+    console.log('whatsupppp')
+    this.setState({editorState: EditorState.createWithContent(convertFromRaw(res.rawState))})
+  }
+
+  remoteStateChangeHigh = (res) => {
+    console.log('high', res)
+    this.setState({highlightStart: res.start, highlightStop: res.stop}, () => {
+      console.log(this.state.highlightStart, this.state.highlightStop)
+    })
+  }
+
   render() {
     const {editorState} = this.state;
     return (
-      <div style={styles.doc}>
-      <div id="content">
-        <h1>Document Editor</h1>
-      </div>
-    <TextField id="text-field-controlled"
-      value={this.state.title}
-      onChange={this.onTitleEdit.bind(this)} />
+      <MuiThemeProvider muiTheme={muiTheme} >
       <div>
-      <div style={styles.toolbar}>
-      <div>
-      <SelectField
-        hintText="Font Size" style={styles.textSizeField}
-        dropDownMenuProps={{
-          iconButton:<i className="material-icons">arrow_drop_down</i>
-        }}>
-          <MenuItem onClick={this._onH1CLick.bind(this)}>H1</MenuItem>
-          <MenuItem onClick={this._onH2CLick.bind(this)}>H2</MenuItem>
-          <MenuItem onClick={this._onH3CLick.bind(this)}>H3</MenuItem>
-          <MenuItem onClick={this._onH4CLick.bind(this)}>H4</MenuItem>
-          <MenuItem onClick={this._onH5CLick.bind(this)}>H5</MenuItem>
-          <MenuItem onClick={this._onH6CLick.bind(this)}>H6</MenuItem>
-      </SelectField>
+        <AppBar title={this.props.title} onLeftIconButtonClick = {this.handleToggle} />
+        <Drawer
+          docked = {false}
+          width = {200}
+          open = {this.state.open}
+          onRequestChange = {(open) => this.setState({open})}>
 
-      <SelectField
-        hintText="Font Color" style={styles.fontColorField}
-        dropDownMenuProps={{
-          iconButton: <i className="material-icons">arrow_drop_down</i>
-        }}>
-          <ColorControls
-            editorState={editorState}
-            onToggle={this.toggleColor}
-          />
-      </SelectField>
+          <AppBar title = "Menu" showMenuIconButton={false} />
+        </Drawer>
+        <div style = {{padding: '5%'}}>
+          <TextField id="read-only-input"
+            value= {this.props.id}
+            />
+          <div>
+            <TextField
+              hintText="Find in document"
+              onChange={this.onChangeSearch} />
+          </div>
+          <div>
+            <div style={styles.toolbar}>
+              <div>
+                <SelectField
+                  hintText="Font Size" style={styles.textSizeField}
+                  dropDownMenuProps={{
+                    iconButton:<i className="material-icons">arrow_drop_down</i>
+                  }}>
+                  <MenuItem onClick={this._onH1CLick.bind(this)}>H1</MenuItem>
+                  <MenuItem onClick={this._onH2CLick.bind(this)}>H2</MenuItem>
+                  <MenuItem onClick={this._onH3CLick.bind(this)}>H3</MenuItem>
+                  <MenuItem onClick={this._onH4CLick.bind(this)}>H4</MenuItem>
+                  <MenuItem onClick={this._onH5CLick.bind(this)}>H5</MenuItem>
+                  <MenuItem onClick={this._onH6CLick.bind(this)}>H6</MenuItem>
+                </SelectField>
+
+                <SelectField
+                  hintText="Font Color" style={styles.fontColorField}
+                  dropDownMenuProps={{
+                    iconButton: <i className="material-icons">arrow_drop_down</i>
+                  }}>
+                  <ColorControls
+                    editorState={editorState}
+                    onToggle={this.toggleColor}
+                  />
+                </SelectField>
+              </div>
+              <button>
+                <i className="material-icons" onClick={this._onBoldClick.bind(this)}>format_bold</i>
+              </button>
+              <button>
+                <i className="material-icons" onClick={this._onItalicsClick.bind(this)}>format_italic</i>
+              </button>
+              <button>
+                <i className="material-icons" onClick={this._onUnderlineClick.bind(this)}>format_underlined</i>
+              </button>
+              <button>
+                <i className="material-icons" onClick={this._onBulletListClick.bind(this)}>format_list_bulleted</i>
+              </button>
+              <button>
+                <i className="material-icons" onClick={this._onNumberedListClick.bind(this)}>format_list_numbered</i>
+              </button>
+
+              <button>
+                <i className="material-icons" onClick={this._onLeftAlignClick.bind(this)}>format_align_left</i>
+              </button>
+
+              <button>
+                <i className="material-icons" onClick={this._onCenterAlignClick.bind(this)}>format_align_center</i>
+              </button>
+
+              <button>
+                <i className="material-icons" onClick={this._onRightAlignClick.bind(this)}>format_align_right</i>
+              </button>
+
+            </div>
+            <div style={styles.editor} onClick={this.focus}>
+              <Editor
+                customStyleMap={colorStyleMap}
+                editorState={editorState}
+                onChange={this.onChange}
+                textAlignment={'right'}
+                blockStyleFn = {this.myBlockStyleFn}
+                ref={(ref) => this.editor = ref}
+                autoSave={this.autoSave}
+              />
+            </div>
+              <RaisedButton
+                label={this.state.saved ? "Saved" : "Save"}
+                onClick= {this._onSave.bind(this)}>
+              </RaisedButton>
+              <RaisedButton
+                label= "View History"
+                onClick = {() => this.viewHistory()}>
+                </RaisedButton>
+            </div>
+
+          {/* <List>
+            {this.state.historyArr.map((save, index) =>
+            <ListItem
+            key = {index}
+            leftAvatar={<Avatar icon={<ActionAssignment />} backgroundColor={blue500}/>}
+            primaryText = {save.title}
+            secondaryText = {new Date(doc.created).toString().slice(0,15)}
+          />)}
+        </List>} */}
+        {this.props.saveDates.map((save, index) => <RaisedButton onClick = {() => this.viewChanges(index)} key = {index} label={new Date(save).toString().slice(0,15)}></RaisedButton>
+        )}
       </div>
-      <button>
-        <i className="material-icons" onClick={this._onBoldClick.bind(this)}>format_bold</i>
-      </button>
-      <button>
-        <i className="material-icons" onClick={this._onItalicsClick.bind(this)}>format_italic</i>
-      </button>
-      <button>
-        <i className="material-icons" onClick={this._onUnderlineClick.bind(this)}>format_underlined</i>
-      </button>
-      <button>
-        <i className="material-icons" onClick={this._onBulletListClick.bind(this)}>format_list_bulleted</i>
-      </button>
-      <button>
-        <i className="material-icons" onClick={this._onNumberedListClick.bind(this)}>format_list_numbered</i>
-      </button>
-
-      <button>
-        <i className="material-icons" onClick={this._onLeftAlignClick.bind(this)}>format_align_left</i>
-      </button>
-
-      <button>
-        <i className="material-icons" onClick={this._onCenterAlignClick.bind(this)}>format_align_center</i>
-      </button>
-
-      <button>
-        <i className="material-icons" onClick={this._onRightAlignClick.bind(this)}>format_align_right</i>
-      </button>
-
-</div>
-        <div style={styles.editor} onClick={this.focus}>
-               <Editor
-                  customStyleMap={colorStyleMap}
-                   editorState={editorState}
-                   onChange={this.onChange}
-                   textAlignment={'right'}
-                   blockStyleFn = {this.myBlockStyleFn}
-                   ref={(ref) => this.editor = ref}
-                />
-        </div>
-        <RaisedButton
-          label={this.state.saved ? "Saved" : "Save"}
-          onClick= {this._onSave.bind(this)}>
-        </RaisedButton>
       </div>
-      </div>
+        </MuiThemeProvider>
     );
   }
 }
 
-
-  class StyleButton extends React.Component {
-          constructor(props) {
-            super(props);
-            this.onToggle = (e) => {
-              e.preventDefault();
-              this.props.onToggle(this.props.style);
-            };
-          }
-          render() {
-            let style;
-            if (this.props.active) {
-              style = {...styles.styleButton, ...colorStyleMap[this.props.style]};
-            } else {
-              style = styles.styleButton;
-            }
-            return (
-              <span style={style} onMouseDown={this.onToggle}>
-                {this.props.label}
-              </span>
-            );
-          }
-        }
+class StyleButton extends React.Component {
+  constructor(props) {
+    super(props);
+    this.onToggle = (e) => {
+      e.preventDefault();
+      this.props.onToggle(this.props.style);
+    };
+  }
+  render() {
+    let style;
+    if (this.props.active) {
+      style = {...styles.styleButton, ...colorStyleMap[this.props.style]};
+    } else {
+      style = styles.styleButton;
+    }
+    return (
+      <span style={style} onMouseDown={this.onToggle}>
+        {this.props.label}
+      </span>
+    );
+  }
+}
 
 var COLORS = [
   {label: 'Red', style: 'red'},
@@ -413,14 +530,14 @@ const ColorControls = (props) => {
     <div style={styles.controls}>
       {COLORS.map(type =>
         <div>
-        <RaisedButton>
-          <StyleButton
-            active={currentStyle.has(type.style)}
-            label={type.label}
-            onToggle={props.onToggle}
-            style={type.style}
-          />
-        </RaisedButton>
+          <RaisedButton>
+            <StyleButton
+              active={currentStyle.has(type.style)}
+              label={type.label}
+              onToggle={props.onToggle}
+              style={type.style}
+            />
+          </RaisedButton>
         </div>
       )}
     </div>
@@ -453,11 +570,6 @@ const colorStyleMap = {
   },
 };
 const styles = {
-  doc: {
-    borderColor: 'blue',
-    borderWidth: '10px',
-    borderStyle: 'solid'
-  },
   toolbar: {
     borderColor: 'black',
     borderStyle: 'solid',
@@ -474,6 +586,8 @@ const styles = {
   },
   editor: {
     cursor: 'text',
+    height: '100%',
+    width: '100%',
     fontSize: 16,
     marginTop: 20,
     minHeight: 400,
@@ -501,5 +615,11 @@ const styles = {
     height: 45,
   }
 };
+
+const muiTheme = getMuiTheme({
+  appBar: {
+    height: 50,
+  },
+});
 
 export default Draft;

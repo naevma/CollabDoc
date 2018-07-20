@@ -9,24 +9,35 @@ import ActionInfo from 'material-ui/svg-icons/action/info';
 import Divider from 'material-ui/Divider';
 import Subheader from 'material-ui/Subheader';
 import Avatar from 'material-ui/Avatar';
+import Paper from 'material-ui/Paper'
 import FileFolder from 'material-ui/svg-icons/file/folder';
 import ActionAssignment from 'material-ui/svg-icons/action/assignment';
 import {blue500, yellow600} from 'material-ui/styles/colors';
 import EditorInsertChart from 'material-ui/svg-icons/editor/insert-chart';
 
+import Draft from './draft'
+import Content from './content'
+
+const paperStyle = {
+  height: '85%',
+  width: '85%',
+  margin: '7%',
+  textAlign: 'center',
+  display: 'inline-block'
+}
 
 class ViewDocs extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
-      curentPage: 'viewDoc',
+      currentPage: 'viewDoc',
       documents: [],
       message: ''
     }
   }
 
   componentDidMount() {
-    fetch('http://3d693881.ngrok.io/viewdoc', {
+    fetch('http://697b5db9.ngrok.io/viewdoc', {
       method: 'GET',
       credentials: 'same-origin'
     })
@@ -62,19 +73,23 @@ class ViewDocs extends React.Component {
     });
   }
 
-
   render() {
     return (
       <div style = {{position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)'}}>
-        <List>
-          {this.state.documents.map((doc) =>
+        {this.state.documents.length === 0 ? <Paper style = {paperStyle} zDepth={5}>
+          <h1>You currently have no documents.</h1>
+          <p> Please create or add one to view your document</p>
+        </Paper>  :
+          <List>
+          {this.state.documents.map((doc, index) =>
             <ListItem
+              key = {index}
               leftAvatar={<Avatar icon={<ActionAssignment />} backgroundColor={blue500}/>}
               primaryText = {doc.title}
               secondaryText = {new Date(doc.created).toString().slice(0,15)}
-              
+              onClick = {() => this.props.redirect('draft', {title: doc.title, contentHistory: doc.contentHistory, id: doc._id, savedDates: doc.saveDates})}
             />)}
-          </List>
+          </List>}
         </div>
       );
     }

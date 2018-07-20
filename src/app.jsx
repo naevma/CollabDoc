@@ -6,12 +6,14 @@ import AppBar from 'material-ui/AppBar';
 import Drawer from 'material-ui/Drawer';
 import MenuItem from 'material-ui/MenuItem';
 import RaisedButton from 'material-ui/RaisedButton';
+import io from 'socket.io-client';
 
 import Draft from './component/draft';
 import Login from './component/login'
 import Register from './component/register'
 import Document from './component/document'
 import Content from './component/content'
+import _ from 'underscore';
 
 
 export default class App extends React.Component {
@@ -20,8 +22,15 @@ export default class App extends React.Component {
     this.state = {
       currentPage: 'Content',
       open: false,
-      show: null
+      show: null,
+      connecting: true
     }
+  }
+
+  componentDidMount() {
+    this.socket = io('http://697b5db9.ngrok.io')
+    this.socket.on('connect', () => this.setState({connecting: null}))
+    this.socket.on('disconnect', () => this.setState({connecting: true}))
   }
 
   handleToggle = () => {
@@ -50,6 +59,8 @@ export default class App extends React.Component {
 
                 <AppBar title = "Menu" showMenuIconButton={false} />
                 <MenuItem onClick = {() => this.redirect('Home')}>Home</MenuItem>
+                <MenuItem onClick = {() => this.redirect('Login')}>Login</MenuItem>
+                <MenuItem onClick = {() => this.redirect('Register')}>Register</MenuItem>
               </Drawer>
 
               <div className = "text-center" style = {{position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)'}}>
@@ -65,7 +76,7 @@ export default class App extends React.Component {
       {this.state.currentPage === 'Login' ?  <Login redirect = {this.redirect} /> : null}
       {this.state.currentPage === 'Register' ?  <Register redirect = {this.redirect}/>  : null}
       {this.state.currentPage === 'Document' ? <Document redirect = {this.redirect} /> : null}
-      {this.state.currentPage === 'Content' ? <Content redirect = {this.redirect}/> : null}
+      {this.state.currentPage === 'Content' ? <Content redirect = {this.redirect} socket = {this.socket}/> : null}
       {/* {this.state.currentPage === 'viewDoc' ?  <Register redirect = {this.redirect}/>  : null}
       {this.state.currentPage === 'addDoc' ? <Document redirect = {this.redirect} /> : null}
       {this.state.currentPage === 'createDoc' ? <Content redirect = {this.redirect}/> : null} */}
