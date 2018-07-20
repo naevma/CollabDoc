@@ -1,7 +1,10 @@
 import React from 'react';
-import {Editor, EditorState, DefaultDraftBlockRenderMap, RichUtils, ContentState, convertToRaw, convertFromRaw, Modifier} from 'draft-js';
+import {Editor, EditorState, DefaultDraftBlockRenderMap, RichUtils, ContentState, convertToRaw, convertFromRaw, Modifier, CompositeDecorator} from 'draft-js';
 import ReactDOM from 'react-dom';
 import MuiThemeProvider from 'material-ui/styles/MuiThemeProvider';
+import getMuiTheme from 'material-ui/styles/getMuiTheme';
+import AppBar from 'material-ui/AppBar';
+import Drawer from 'material-ui/Drawer';
 import RaisedButton from 'material-ui/RaisedButton';
 import DropDownMenu from 'material-ui/DropDownMenu';
 import Menu from 'material-ui/Menu';
@@ -24,7 +27,9 @@ class Draft extends React.Component {
       collaborators: [],
       currentDocument: {},
       autosave: false,
-      online: []
+      online: [],
+      historyArr: [],
+      search: ''
     };
     // this.onChange = (editorState) => this.setState({editorState});
     this.handleKeyCommand=this.handleKeyCommand.bind(this);
@@ -51,6 +56,40 @@ class Draft extends React.Component {
   //   this.socket.emit('disconnect');
   //   this.socket.disconnect();
   // }
+
+  SearchHighlight = (props) => (
+  <span className="search-highlight">{props.children}</span>
+);
+
+generateDecorator = (highlightTerm) => {
+  const regex = new RegExp(highlightTerm, 'g');
+  return new CompositeDecorator([{
+    strategy: (contentBlock, callback) => {
+      if (highlightTerm !== '') {
+        this.findWithRegex(regex, contentBlock, callback);
+      }
+    },
+    component: this.SearchHighlight,
+  }])
+};
+
+findWithRegex = (regex, contentBlock, callback) => {
+const text = contentBlock.getText();
+let matchArr, start, end;
+while ((matchArr = regex.exec(text)) !== null) {
+  start = matchArr.index;
+  end = start + matchArr[0].length;
+  callback(start, end);
+}
+};
+
+onChangeSearch = (e) => {
+  const search = e.target.value;
+  this.setState({
+    search,
+    editorState: EditorState.set(this.state.editorState, { decorator: this.generateDecorator(search) }),
+  });
+}
 
   handleClick = event => {
     this.setState({anchorE1: event.currentTarget})
@@ -178,17 +217,19 @@ class Draft extends React.Component {
     var newContentHistory = this.state.contentHistory.slice();
     newContentHistory.push(contentState);
     this.setState({contentHistory: newContentHistory}, () => {
-    // this.socket.emit('newContentHistory', this.state.contentHistory)
+      // this.socket.emit('newContentHistory', this.state.contentHistory)
     })
     var newTitle = this.state.title;
     var rawContent = this.state.editorState.getCurrentContent();
     //var currentDocument = Object.assign({}, {content: rawContent})
+    // var array1=this.state.historyArr.slice();
+    // array1.push(contentState);
     this.setState({saved: true, title: newTitle, editorState: EditorState.createWithContent(rawContent)}, () => {
-      console.log(this.state.saved)
+      console.log('fuckingwork',this.state.historyArr)
       console.log('editor', this.state.editorState)
     })
 
-    fetch('http://7382e430.ngrok.io/savedoc', {
+    fetch('http://697b5db9.ngrok.io/savedoc', {
       method: 'POST',
       headers: {
         "Content-Type": "application/json"
@@ -227,13 +268,29 @@ class Draft extends React.Component {
     });
   }
 
-  viewHistory() {
+  viewChanges = (index) => {
+    console.log("HISTORY", this.state.historyArr);
+    var arr= this.state.historyArr.slice()
+    var specificIndex = arr[index]
+    if (typeof specificIndex === "string") {
+      specificIndex = JSON.parse(specificIndex);
+    }
+    if (specificIndex.entityMap == null) {
+      specificIndex.entityMap = {};
+    }
+  console.log("xxxxx", specificIndex)
+    this.setState({
+      editorState: EditorState.createWithContent(convertFromRaw(specificIndex))
+    })
+  }
+
+  viewHistory = () => {
 
   }
 
   onTitleEdit(event) {
     this.setState({saved: false, title: event.target.value})
-      console.log(this.state.title)
+    console.log(this.state.title)
   }
 
   handleKeyCommand(command, editorState) {
@@ -250,7 +307,7 @@ class Draft extends React.Component {
     socket.emit('openDoc', {
       _id: this.props.id
     })
-
+    console.log("this.props.save", this.props.saveDates)
     socket.on('syncDocument', this.remoteStateChange)
 
     console.log("contentHistory", this.props.contentHistory)
@@ -258,7 +315,15 @@ class Draft extends React.Component {
       console.log("contentHistory1", "hi")
 
       var newArr = this.props.contentHistory.slice();
+
+
+      // for(var i=0; i<newArr.length;i++){
+      //   allDocs.push(EditorState.createWithContent(convertFromRaw(newArr[i])))
+      // }
+
+
       let lastDoc = newArr[newArr.length - 1];
+
       if (typeof lastDoc === "string") {
         lastDoc = JSON.parse(lastDoc);
       }
@@ -268,7 +333,8 @@ class Draft extends React.Component {
       console.log(newArr)
       this.setState({
         contentHistory: this.props.contentHistory,
-        editorState: EditorState.createWithContent(convertFromRaw(lastDoc))
+        editorState: EditorState.createWithContent(convertFromRaw(lastDoc)),
+        historyArr:  newArr
       })
     }
   }
@@ -281,116 +347,143 @@ class Draft extends React.Component {
   render() {
     const {editorState} = this.state;
     return (
-      <div style={styles.doc}>
-      <div id="content">
-        <h1>Document Editor</h1>
-      </div>
-    <TextField id="text-field-controlled"
-      value={this.props.title}
-      onChange={this.onTitleEdit.bind(this)} />
+      <MuiThemeProvider muiTheme={muiTheme} >
       <div>
-      <div style={styles.toolbar}>
-      <div>
-      <SelectField
-        hintText="Font Size" style={styles.textSizeField}
-        dropDownMenuProps={{
-          iconButton:<i className="material-icons">arrow_drop_down</i>
-        }}>
-          <MenuItem onClick={this._onH1CLick.bind(this)}>H1</MenuItem>
-          <MenuItem onClick={this._onH2CLick.bind(this)}>H2</MenuItem>
-          <MenuItem onClick={this._onH3CLick.bind(this)}>H3</MenuItem>
-          <MenuItem onClick={this._onH4CLick.bind(this)}>H4</MenuItem>
-          <MenuItem onClick={this._onH5CLick.bind(this)}>H5</MenuItem>
-          <MenuItem onClick={this._onH6CLick.bind(this)}>H6</MenuItem>
-      </SelectField>
+        <AppBar title={this.props.title} onLeftIconButtonClick = {this.handleToggle} />
+        <Drawer
+          docked = {false}
+          width = {200}
+          open = {this.state.open}
+          onRequestChange = {(open) => this.setState({open})}>
 
-      <SelectField
-        hintText="Font Color" style={styles.fontColorField}
-        dropDownMenuProps={{
-          iconButton: <i className="material-icons">arrow_drop_down</i>
-        }}>
-          <ColorControls
-            editorState={editorState}
-            onToggle={this.toggleColor}
-          />
-      </SelectField>
+          <AppBar title = "Menu" showMenuIconButton={false} />
+        </Drawer>
+        <div style = {{padding: '5%'}}>
+          <TextField id="read-only-input"
+            value= {this.props.id}
+            />
+          <div>
+            <TextField
+              hintText="Find in document"
+              onChange={this.onChangeSearch} />
+          </div>
+          <div>
+            <div style={styles.toolbar}>
+              <div>
+                <SelectField
+                  hintText="Font Size" style={styles.textSizeField}
+                  dropDownMenuProps={{
+                    iconButton:<i className="material-icons">arrow_drop_down</i>
+                  }}>
+                  <MenuItem onClick={this._onH1CLick.bind(this)}>H1</MenuItem>
+                  <MenuItem onClick={this._onH2CLick.bind(this)}>H2</MenuItem>
+                  <MenuItem onClick={this._onH3CLick.bind(this)}>H3</MenuItem>
+                  <MenuItem onClick={this._onH4CLick.bind(this)}>H4</MenuItem>
+                  <MenuItem onClick={this._onH5CLick.bind(this)}>H5</MenuItem>
+                  <MenuItem onClick={this._onH6CLick.bind(this)}>H6</MenuItem>
+                </SelectField>
+
+                <SelectField
+                  hintText="Font Color" style={styles.fontColorField}
+                  dropDownMenuProps={{
+                    iconButton: <i className="material-icons">arrow_drop_down</i>
+                  }}>
+                  <ColorControls
+                    editorState={editorState}
+                    onToggle={this.toggleColor}
+                  />
+                </SelectField>
+              </div>
+              <button>
+                <i className="material-icons" onClick={this._onBoldClick.bind(this)}>format_bold</i>
+              </button>
+              <button>
+                <i className="material-icons" onClick={this._onItalicsClick.bind(this)}>format_italic</i>
+              </button>
+              <button>
+                <i className="material-icons" onClick={this._onUnderlineClick.bind(this)}>format_underlined</i>
+              </button>
+              <button>
+                <i className="material-icons" onClick={this._onBulletListClick.bind(this)}>format_list_bulleted</i>
+              </button>
+              <button>
+                <i className="material-icons" onClick={this._onNumberedListClick.bind(this)}>format_list_numbered</i>
+              </button>
+
+              <button>
+                <i className="material-icons" onClick={this._onLeftAlignClick.bind(this)}>format_align_left</i>
+              </button>
+
+              <button>
+                <i className="material-icons" onClick={this._onCenterAlignClick.bind(this)}>format_align_center</i>
+              </button>
+
+              <button>
+                <i className="material-icons" onClick={this._onRightAlignClick.bind(this)}>format_align_right</i>
+              </button>
+
+            </div>
+            <div style={styles.editor} onClick={this.focus}>
+              <Editor
+                customStyleMap={colorStyleMap}
+                editorState={editorState}
+                onChange={this.onChange}
+                textAlignment={'right'}
+                blockStyleFn = {this.myBlockStyleFn}
+                ref={(ref) => this.editor = ref}
+              />
+            </div>
+              <RaisedButton
+                label={this.state.saved ? "Saved" : "Save"}
+                onClick= {this._onSave.bind(this)}>
+              </RaisedButton>
+              <RaisedButton
+                label= "View History"
+                onClick = {() => this.viewHistory()}>
+                </RaisedButton>
+            </div>
+
+          {/* <List>
+            {this.state.historyArr.map((save, index) =>
+            <ListItem
+            key = {index}
+            leftAvatar={<Avatar icon={<ActionAssignment />} backgroundColor={blue500}/>}
+            primaryText = {save.title}
+            secondaryText = {new Date(doc.created).toString().slice(0,15)}
+          />)}
+        </List>} */}
+        {this.props.saveDates.map((save, index) => <RaisedButton onClick = {() => this.viewChanges(index)} key = {index} label={new Date(save).toString().slice(0,15)}></RaisedButton>
+        )}
       </div>
-      <button>
-        <i className="material-icons" onClick={this._onBoldClick.bind(this)}>format_bold</i>
-      </button>
-      <button>
-        <i className="material-icons" onClick={this._onItalicsClick.bind(this)}>format_italic</i>
-      </button>
-      <button>
-        <i className="material-icons" onClick={this._onUnderlineClick.bind(this)}>format_underlined</i>
-      </button>
-      <button>
-        <i className="material-icons" onClick={this._onBulletListClick.bind(this)}>format_list_bulleted</i>
-      </button>
-      <button>
-        <i className="material-icons" onClick={this._onNumberedListClick.bind(this)}>format_list_numbered</i>
-      </button>
-
-      <button>
-        <i className="material-icons" onClick={this._onLeftAlignClick.bind(this)}>format_align_left</i>
-      </button>
-
-      <button>
-        <i className="material-icons" onClick={this._onCenterAlignClick.bind(this)}>format_align_center</i>
-      </button>
-
-      <button>
-        <i className="material-icons" onClick={this._onRightAlignClick.bind(this)}>format_align_right</i>
-      </button>
-
-</div>
-        <div style={styles.editor} onClick={this.focus}>
-               <Editor
-                  customStyleMap={colorStyleMap}
-                   editorState={editorState}
-                   onChange={this.onChange}
-                   textAlignment={'right'}
-                   blockStyleFn = {this.myBlockStyleFn}
-                   ref={(ref) => this.editor = ref}
-                />
-        </div>
-        <RaisedButton
-          label={this.state.saved ? "Saved" : "Save"}
-          onClick= {this._onSave.bind(this)}>
-        </RaisedButton>
-        <RaisedButton
-          label= "View History"
-          onClick= {this.viewHistory.bind(this)}>
-        </RaisedButton>
       </div>
-      </div>
+        </MuiThemeProvider>
     );
   }
 }
 
 
-  class StyleButton extends React.Component {
-          constructor(props) {
-            super(props);
-            this.onToggle = (e) => {
-              e.preventDefault();
-              this.props.onToggle(this.props.style);
-            };
-          }
-          render() {
-            let style;
-            if (this.props.active) {
-              style = {...styles.styleButton, ...colorStyleMap[this.props.style]};
-            } else {
-              style = styles.styleButton;
-            }
-            return (
-              <span style={style} onMouseDown={this.onToggle}>
-                {this.props.label}
-              </span>
-            );
-          }
-        }
+class StyleButton extends React.Component {
+  constructor(props) {
+    super(props);
+    this.onToggle = (e) => {
+      e.preventDefault();
+      this.props.onToggle(this.props.style);
+    };
+  }
+  render() {
+    let style;
+    if (this.props.active) {
+      style = {...styles.styleButton, ...colorStyleMap[this.props.style]};
+    } else {
+      style = styles.styleButton;
+    }
+    return (
+      <span style={style} onMouseDown={this.onToggle}>
+        {this.props.label}
+      </span>
+    );
+  }
+}
 
 var COLORS = [
   {label: 'Red', style: 'red'},
@@ -407,14 +500,14 @@ const ColorControls = (props) => {
     <div style={styles.controls}>
       {COLORS.map(type =>
         <div>
-        <RaisedButton>
-          <StyleButton
-            active={currentStyle.has(type.style)}
-            label={type.label}
-            onToggle={props.onToggle}
-            style={type.style}
-          />
-        </RaisedButton>
+          <RaisedButton>
+            <StyleButton
+              active={currentStyle.has(type.style)}
+              label={type.label}
+              onToggle={props.onToggle}
+              style={type.style}
+            />
+          </RaisedButton>
         </div>
       )}
     </div>
@@ -447,11 +540,6 @@ const colorStyleMap = {
   },
 };
 const styles = {
-  doc: {
-    borderColor: 'blue',
-    borderWidth: '10px',
-    borderStyle: 'solid'
-  },
   toolbar: {
     borderColor: 'black',
     borderStyle: 'solid',
@@ -468,6 +556,8 @@ const styles = {
   },
   editor: {
     cursor: 'text',
+    height: '100%',
+    width: '100%',
     fontSize: 16,
     marginTop: 20,
     minHeight: 400,
@@ -495,5 +585,11 @@ const styles = {
     height: 45,
   }
 };
+
+const muiTheme = getMuiTheme({
+  appBar: {
+    height: 50,
+  },
+});
 
 export default Draft;
