@@ -42,6 +42,12 @@ class Draft extends React.Component {
     this.interval = setInterval(this._onSave.bind(this), 10000)
   }
 
+  handleToggle = () => {
+    this.setState({
+      open: !this.state.open
+    })
+  }
+
   onChange = (editorState) => {
     const {socket} = this.props
     this.setState({editorState}, () => {
@@ -60,7 +66,6 @@ class Draft extends React.Component {
       })
     })
   }
-
 
   componentWillUnmount() {
     this.socket.emit('disconnect');
@@ -302,7 +307,7 @@ class Draft extends React.Component {
   }
 
   finishChanges = () => {
-
+    this.props.redirect('Content');
   }
 
   onTitleEdit(event) {
@@ -382,7 +387,10 @@ class Draft extends React.Component {
             open = {this.state.open}
             onRequestChange = {(open) => this.setState({open})}>
 
+            <div className = "text-center">
             <AppBar title = "Menu" showMenuIconButton={false} />
+            <MenuItem onClick = {() => this.props.redirect('Content')}>Back</MenuItem>
+            </div>
           </Drawer>
 
           {this.state.saveHistory === false ? <div className = "container">
@@ -477,7 +485,7 @@ class Draft extends React.Component {
                   </RaisedButton>
                 </div>
               </div>
-            </div> : <div style = {{padding: '5%'}}>
+            </div> : <div className = "container">
               <div style = {{display: 'flex', flexDirection: 'row'}}>
                 <div style = {{flex: 3}}>
                   <TextField id="read-only-input"
