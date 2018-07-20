@@ -29,17 +29,21 @@ class Draft extends React.Component {
       autosave: false,
       online: [],
       historyArr: [],
-      search: ''
+      search: '',
+      userColor: 'black',
+      highlightStart: 0,
+      highlightStop:0
     };
     // this.onChange = (editorState) => this.setState({editorState});
     this.handleKeyCommand=this.handleKeyCommand.bind(this);
     this.toggleColor = (toggledColor) => this._toggleColor(toggledColor);
-
+    this.previousHighlight = null;
   }
 
   autoSave() {
     setInterval(this.onSave.bind(this), 30000);
     this.setState({autosave: !this.state.autosave})
+    console.log('saved!')
   }
 
   onChange = (editorState) => {
@@ -49,6 +53,15 @@ class Draft extends React.Component {
         _id: this.props.id,
         rawState: convertToRaw(editorState.getCurrentContent()),
       });
+    })
+    const selection = editorState.getSelection();
+    console.log('highlight', selection.anchorOffset, selection.focusOffset)
+    this.setState({highlightStart: selection.anchorOffset, highlightStop: selection.focusOffset}, () => {
+      socket.emit('highlight', {
+        _id: this.props.id,
+        start: selection.anchorOffset,
+        stop: selection.focusOffset
+      })
     })
   }
   //
@@ -302,13 +315,23 @@ onChangeSearch = (e) => {
     return 'not-handled'
   }
 
+  randomColor = () => {
+    var randColor = 'rgb(' + (Math.floor(Math.random() * 256)) + ',' + (Math.floor(Math.random() * 256)) + ',' + (Math.floor(Math.random() * 256)) + ')';
+    this.setState({userColor: randColor}, () => {
+      console.log(this.state.userColor)
+    })
+  }
+
   componentDidMount() {
+    this.randomColor();
+
     const {socket} = this.props
     socket.emit('openDoc', {
       _id: this.props.id
     })
     console.log("this.props.save", this.props.saveDates)
     socket.on('syncDocument', this.remoteStateChange)
+    socket.on('highlight', this.remoteStateChangeHigh)
 
     console.log("contentHistory", this.props.contentHistory)
     if (this.props.contentHistory.length) {
@@ -342,6 +365,13 @@ onChangeSearch = (e) => {
   remoteStateChange = (res) => {
     console.log('whatsupppp')
     this.setState({editorState: EditorState.createWithContent(convertFromRaw(res.rawState))})
+  }
+
+  remoteStateChangeHigh = (res) => {
+    console.log('high', res)
+    this.setState({highlightStart: res.start, highlightStop: res.stop}, () => {
+      console.log(this.state.highlightStart, this.state.highlightStop)
+    })
   }
 
   render() {
@@ -431,6 +461,7 @@ onChangeSearch = (e) => {
                 textAlignment={'right'}
                 blockStyleFn = {this.myBlockStyleFn}
                 ref={(ref) => this.editor = ref}
+                autoSave={this.autoSave}
               />
             </div>
               <RaisedButton
