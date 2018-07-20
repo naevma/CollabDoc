@@ -492,7 +492,6 @@ onChangeSearch = (e) => {
   }
 }
 
-
 class StyleButton extends React.Component {
   constructor(props) {
     super(props);
