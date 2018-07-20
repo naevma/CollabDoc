@@ -14,6 +14,10 @@ import SelectField from 'material-ui/SelectField';
 import _ from 'underscore';
 import io from 'socket.io-client'
 
+import randomColor from 'randomcolor';
+
+
+
 class Draft extends React.Component {
   constructor(props) {
     super(props);
@@ -32,7 +36,8 @@ class Draft extends React.Component {
       search: '',
       userColor: 'black',
       highlightStart: 0,
-      highlightStop:0
+      highlightStop:0,
+      randomColor:''
     };
     // this.onChange = (editorState) => this.setState({editorState});
     this.handleKeyCommand=this.handleKeyCommand.bind(this);
@@ -323,7 +328,9 @@ onChangeSearch = (e) => {
   }
 
   componentDidMount() {
-    this.randomColor();
+
+  var color = randomColor();
+  console.log('COLOR',color)
 
     const {socket} = this.props
     socket.emit('openDoc', {
@@ -357,7 +364,8 @@ onChangeSearch = (e) => {
       this.setState({
         contentHistory: this.props.contentHistory,
         editorState: EditorState.createWithContent(convertFromRaw(lastDoc)),
-        historyArr:  newArr
+        historyArr:  newArr,
+        randomColor:color
       })
     }
   }
