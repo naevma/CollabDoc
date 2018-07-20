@@ -119,7 +119,7 @@ export default class Content extends React.Component {
             {this.state.show === 'Create' ? <CreateDoc redirect = {this.redirect}/> : null}
           </Paper>
         </div>
-      </MuiThemeProvider> : <Draft socket = {this.props.socket} title={this.state.data.title} contentHistory = {this.state.data.contentHistory} id = {this.state.data.id} saveDates = {this.state.data.savedDates}/>}
+      </MuiThemeProvider> : <Draft redirect = {this.redirect} socket = {this.props.socket} title={this.state.data.title} contentHistory = {this.state.data.contentHistory} id = {this.state.data.id} saveDates = {this.state.data.savedDates}/>}
     </div>
     );
   }
