@@ -14,6 +14,7 @@ import SelectField from 'material-ui/SelectField';
 import _ from 'underscore';
 import io from 'socket.io-client'
 
+
 class Draft extends React.Component {
   constructor(props) {
     super(props);
@@ -37,8 +38,9 @@ class Draft extends React.Component {
     this.handleKeyCommand=this.handleKeyCommand.bind(this);
     this.toggleColor = (toggledColor) => this._toggleColor(toggledColor);
     this.previousHighlight = null;
-    this.interval = setInterval(this._onSave.bind(this), 10000)
+    this.interval = setInterval(this._onSave.bind(this), 10000);
   }
+
 
   onChange = (editorState) => {
     const {socket} = this.props
@@ -50,12 +52,58 @@ class Draft extends React.Component {
     })
     const selection = editorState.getSelection();
     console.log('highlight', selection.anchorOffset, selection.focusOffset)
+
+
     this.setState({highlightStart: selection.anchorOffset, highlightStop: selection.focusOffset}, () => {
       socket.emit('highlight', {
         _id: this.props.id,
         start: selection.anchorOffset,
         stop: selection.focusOffset
       })
+    })
+
+    socket.on('receiveNewCursor', (data) => {
+      if (selection.anchorOffset === selection.focusOffset) {
+        const windowSelection = window.getSelection();
+        if (windowSelection.rangeCount>0) {
+          var ranges = [];
+          var clientRects;
+          for (var i = 0; i < windowSelection.rangeCount; i++) {
+            ranges[i] = windowSelection.getRangeAt(i);
+            clientRects = ranges[i].getClientRects();
+        }
+          console.log('clientRects', clientRects)
+          if (clientRects.length >0) {
+            const rects = clientRects[0];
+            console.log('location', rects);
+            const {top, left, bottom} = rects
+            const loc = {top: rects.top, bottom: rects.bottom, left: rects.left}
+            var data = {incomingSelectionObj: selection, loc: loc}
+            console.log('data', data)
+            socket.emit('cursorMove', data)
+          }
+        }
+      }
+      // console.log('in receive of cursor mvoemnt');
+      const incomingSelectionObj = data.incomingSelectionObj
+      const loc = data.loc
+      let editorState = this.state.editorState;
+      const originalEditorState = editorState;
+      const originalSelection = this.state.editorState.getSelection();
+      //take the original selection stateand change all its values to be the selectionstateobj  that we just received
+      const incomingSelectionState = originalSelection.merge(incomingSelectionObj)
+      const temporaryEditorState = EditorState.forceSelection(originalEditorState, incomingSelectionState)
+
+      if(temporaryEditorState) {
+        this.setState({editorState: temporaryEditorState}, function() {
+          //were now referring to browser selectionstateobjc
+          if(loc && loc.top && loc.bottom && loc.left) {
+            this.setState({editorState: originalEditorState, top: loc.top, left: loc.left, height: loc.bottom - loc.top})
+          }
+        })
+      } else {
+        console.log('temportaray state undefined wtf');
+      }
     })
   }
 
@@ -385,33 +433,33 @@ onChangeSearch = (e) => {
               hintText="Find in document"
               onChange={this.onChangeSearch} />
           </div>
-          <div>
+          <div style={{border: '1px solid black', paddingBottom: 10}}>
             <div style={styles.toolbar}>
-              <div>
-                <SelectField
-                  hintText="Font Size" style={styles.textSizeField}
-                  dropDownMenuProps={{
-                    iconButton:<i className="material-icons">arrow_drop_down</i>
-                  }}>
-                  <MenuItem onClick={this._onH1CLick.bind(this)}>H1</MenuItem>
-                  <MenuItem onClick={this._onH2CLick.bind(this)}>H2</MenuItem>
-                  <MenuItem onClick={this._onH3CLick.bind(this)}>H3</MenuItem>
-                  <MenuItem onClick={this._onH4CLick.bind(this)}>H4</MenuItem>
-                  <MenuItem onClick={this._onH5CLick.bind(this)}>H5</MenuItem>
-                  <MenuItem onClick={this._onH6CLick.bind(this)}>H6</MenuItem>
-                </SelectField>
+            <div style = {{display: 'inline-block', position: 'relative', top: '11px'}}>
+            <SelectField
+              hintText="Font Size" style={styles.textSizeField}
+              dropDownMenuProps={{
+                iconButton:<i className="material-icons">arrow_drop_down</i>
+              }}>
+              <MenuItem onClick={this._onH1CLick.bind(this)}>H1</MenuItem>
+              <MenuItem onClick={this._onH2CLick.bind(this)}>H2</MenuItem>
+              <MenuItem onClick={this._onH3CLick.bind(this)}>H3</MenuItem>
+              <MenuItem onClick={this._onH4CLick.bind(this)}>H4</MenuItem>
+              <MenuItem onClick={this._onH5CLick.bind(this)}>H5</MenuItem>
+              <MenuItem onClick={this._onH6CLick.bind(this)}>H6</MenuItem>
+            </SelectField>
 
-                <SelectField
-                  hintText="Font Color" style={styles.fontColorField}
-                  dropDownMenuProps={{
-                    iconButton: <i className="material-icons">arrow_drop_down</i>
-                  }}>
-                  <ColorControls
-                    editorState={editorState}
-                    onToggle={this.toggleColor}
-                  />
-                </SelectField>
-              </div>
+            <SelectField
+              hintText="Font Color" style={styles.fontColorField}
+              dropDownMenuProps={{
+                iconButton: <i className="material-icons" style={{paddingRight: 10}}>arrow_drop_down</i>
+              }}>
+              <ColorControls
+                editorState={editorState}
+                onToggle={this.toggleColor}
+              />
+            </SelectField>
+            </div>
               <button>
                 <i className="material-icons" onClick={this._onBoldClick.bind(this)}>format_bold</i>
               </button>
@@ -439,9 +487,8 @@ onChangeSearch = (e) => {
               <button>
                 <i className="material-icons" onClick={this._onRightAlignClick.bind(this)}>format_align_right</i>
               </button>
-
             </div>
-            <div style={styles.editor} onClick={this.focus}>
+            <div className="editor" style={styles.editor} onClick={this.focus}>
               <Editor
                 customStyleMap={colorStyleMap}
                 editorState={editorState}
@@ -451,14 +498,17 @@ onChangeSearch = (e) => {
                 ref={(ref) => this.editor = ref}
               />
             </div>
+            <div style={{paddingLeft: 10}}>
               <RaisedButton
                 label={this.state.saved ? "Saved" : "Save"}
-                onClick= {this._onSave.bind(this)}>
+                onClick= {this._onSave.bind(this)}
+                style={{marginRight: 10}}>
               </RaisedButton>
               <RaisedButton
                 label= "View History"
                 onClick = {() => this.viewHistory()}>
                 </RaisedButton>
+              </div>
             </div>
 
           {/* <List>
@@ -517,7 +567,7 @@ const ColorControls = (props) => {
     <div style={styles.controls}>
       {COLORS.map(type =>
         <div>
-          <RaisedButton>
+          <RaisedButton style={{boxShadow: '0px 0px 0px'}}>
             <StyleButton
               active={currentStyle.has(type.style)}
               label={type.label}
@@ -558,18 +608,10 @@ const colorStyleMap = {
 };
 const styles = {
   toolbar: {
-    borderColor: 'black',
-    borderStyle: 'solid',
-    borderWidth: '1px',
-    paddingBottom: 20,
-    height: 80,
-    alignContent: 'center',
-    justifyElements: 'center'
-  },
-  root: {
-    fontFamily: '\'Georgia\', serif',
-    fontSize: 14,
-    padding: 20,
+    borderBottom: '1px solid grey',
+    paddingLeft: 10,
+    display: 'flex',
+    alignItems: 'center'
   },
   editor: {
     cursor: 'text',
@@ -583,23 +625,21 @@ const styles = {
   controls: {
     fontFamily: '\'Helvetica\', sans-serif',
     fontSize: 14,
-    marginBottom: 10,
     userSelect: 'none',
   },
   styleButton: {
-    color: 'black',
-    cursor: 'pointer',
-    marginRight: 16,
-    padding: '2px 0',
-    marginTop: 20
+    color: 'black'
   },
   textSizeField: {
     width: 100,
-    height: 45
+    height: 45,
+    position: 'relative'
   },
   fontColorField: {
     width: 110,
     height: 45,
+    position: 'relative',
+    paddingLeft: 5
   }
 };
 
