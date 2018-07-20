@@ -28,7 +28,7 @@ export default class App extends React.Component {
   }
 
   componentDidMount() {
-    this.socket = io('http://7382e430.ngrok.io')
+    this.socket = io('http://697b5db9.ngrok.io')
     this.socket.on('connect', () => this.setState({connecting: null}))
     this.socket.on('disconnect', () => this.setState({connecting: true}))
   }

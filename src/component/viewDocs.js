@@ -37,7 +37,7 @@ class ViewDocs extends React.Component {
   }
 
   componentDidMount() {
-    fetch('http://7382e430.ngrok.io/viewdoc', {
+    fetch('http://697b5db9.ngrok.io/viewdoc', {
       method: 'GET',
       credentials: 'same-origin'
     })
@@ -87,7 +87,7 @@ class ViewDocs extends React.Component {
               leftAvatar={<Avatar icon={<ActionAssignment />} backgroundColor={blue500}/>}
               primaryText = {doc.title}
               secondaryText = {new Date(doc.created).toString().slice(0,15)}
-              onClick = {() => this.props.redirect('draft', {title: doc.title, contentHistory: doc.contentHistory, id: doc._id})}
+              onClick = {() => this.props.redirect('draft', {title: doc.title, contentHistory: doc.contentHistory, id: doc._id, savedDates: doc.saveDates})}
             />)}
           </List>}
         </div>
