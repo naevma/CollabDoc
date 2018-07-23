@@ -27,7 +27,7 @@ export default class Content extends React.Component {
   constructor(props){
     super(props)
     this.state = {
-      currentPage: 'Content',
+      currentPage: 'Draft',
       open: false,
       show: null,
       data: {}
