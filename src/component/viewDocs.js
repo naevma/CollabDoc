@@ -37,7 +37,7 @@ class ViewDocs extends React.Component {
   }
 
   componentDidMount() {
-    fetch('http://697b5db9.ngrok.io/viewdoc', {
+    fetch('http://3705620f.ngrok.io/viewdoc', {
       method: 'GET',
       credentials: 'same-origin'
     })

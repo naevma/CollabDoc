@@ -11,6 +11,7 @@ import Menu from 'material-ui/Menu';
 import MenuItem from 'material-ui/MenuItem';
 import TextField from 'material-ui/TextField'
 import SelectField from 'material-ui/SelectField';
+import {List, ListItem} from 'material-ui/List';
 import _ from 'underscore';
 import io from 'socket.io-client'
 
@@ -33,32 +34,37 @@ class Draft extends React.Component {
       currentDocument: {},
       autosave: false,
       online: [],
-      historyArr: [],
       search: '',
       highlightStart: 0,
       highlightStop:0,
-      randomColor:color
+      randomColor:color,
+      saveHistory: false,
+      saveDates: props.saveDates
     };
-    // this.onChange = (editorState) => this.setState({editorState});
     this.handleKeyCommand=this.handleKeyCommand.bind(this);
     this.toggleColor = (toggledColor) => this._toggleColor(toggledColor);
     this.previousHighlight = null;
     this.interval = setInterval(this._onSave.bind(this), 10000);
   }
 
+hangleToggle = () => {
+  this.setState({
+    open: !this.state.open
+  })
+}
+
 
   onChange = (editorState) => {
     const {socket} = this.props
-    this.setState({editorState}, () => {
+    this.setState({editorState, saved: false}, () => {
       socket.emit('syncDocument', {
         _id: this.props.id,
         rawState: convertToRaw(editorState.getCurrentContent()),
       });
     })
+
     const selection = editorState.getSelection();
     console.log('highlight', selection.anchorOffset, selection.focusOffset)
-
-
 
     this.setState({highlightStart: selection.anchorOffset, highlightStop: selection.focusOffset}, () => {
       socket.emit('highlight', {
@@ -111,7 +117,7 @@ class Draft extends React.Component {
         console.log('temportaray state undefined wtf');
       }
     })
-    
+
     var start_high = selection.focusOffset
     var stop_high = selection.anchorOffset
     if(start_high < stop_high){
@@ -296,23 +302,21 @@ onChangeSearch = (e) => {
 
   _onSave() {
     // var newContent = JSON.stringify(convertToRaw(this.state.editorState.getCurrentContent()));
+    const date = new Date()
     var contentState = convertToRaw(this.state.editorState.getCurrentContent());
     var newContentHistory = this.state.contentHistory.slice();
     newContentHistory.push(contentState);
-    this.setState({contentHistory: newContentHistory}, () => {
-      // this.socket.emit('newContentHistory', this.state.contentHistory)
-    })
     var newTitle = this.state.title;
     var rawContent = this.state.editorState.getCurrentContent();
     //var currentDocument = Object.assign({}, {content: rawContent})
     // var array1=this.state.historyArr.slice();
     // array1.push(contentState);
-    this.setState({saved: true, title: newTitle, editorState: EditorState.createWithContent(rawContent)}, () => {
-      console.log('fuckingwork',this.state.historyArr)
-      console.log('editor', this.state.editorState)
+    let saveDates = [...this.state.saveDates, date]
+    this.setState({saveDates, contentHistory: newContentHistory, saved: true, title: newTitle, editorState: EditorState.createWithContent(rawContent)}, () => {
+      // this.socket.emit('newContentHistory', this.state.contentHistory)
     })
 
-    fetch('http://697b5db9.ngrok.io/savedoc', {
+    fetch('http://3705620f.ngrok.io/savedoc', {
       method: 'POST',
       headers: {
         "Content-Type": "application/json"
@@ -321,7 +325,7 @@ onChangeSearch = (e) => {
       body: JSON.stringify({
         documentID: this.props.id,
         editorState: contentState,
-        saveDates: new Date()
+        saveDates: date
       })
     })
     .then((response) => {
@@ -352,8 +356,8 @@ onChangeSearch = (e) => {
   }
 
   viewChanges = (index) => {
-    console.log("HISTORY", this.state.historyArr);
-    var arr= this.state.historyArr.slice()
+    console.log("HISTORY", this.state.contentHistory);
+    var arr= this.state.contentHistory.slice()
     var specificIndex = arr[index]
     if (typeof specificIndex === "string") {
       specificIndex = JSON.parse(specificIndex);
@@ -368,7 +372,17 @@ onChangeSearch = (e) => {
   }
 
   viewHistory = () => {
+    this.setState({
+      saveHistory: !this.state.saveHistory
+    })
+  }
 
+  finishChanges = () => {
+    if (this.state.saved === false) {
+      alert('Make sure you save first!')
+    } else {
+      this.props.redirect('Content')
+    }
   }
 
   onTitleEdit(event) {
@@ -385,14 +399,7 @@ onChangeSearch = (e) => {
     return 'not-handled'
   }
 
-
-
   componentDidMount() {
-
-
-
-
-
     const {socket} = this.props
     socket.emit('openDoc', {
       _id: this.props.id
@@ -407,12 +414,6 @@ onChangeSearch = (e) => {
 
       var newArr = this.props.contentHistory.slice();
 
-
-      // for(var i=0; i<newArr.length;i++){
-      //   allDocs.push(EditorState.createWithContent(convertFromRaw(newArr[i])))
-      // }
-
-
       let lastDoc = newArr[newArr.length - 1];
 
       if (typeof lastDoc === "string") {
@@ -423,12 +424,10 @@ onChangeSearch = (e) => {
       }
       console.log(newArr)
       this.setState({
-        contentHistory: this.props.contentHistory,
+        contentHistory: this.props.contentHistory.slice(),
         editorState: EditorState.createWithContent(convertFromRaw(lastDoc)),
-        historyArr:  newArr
       })
     }
-
   }
 
   remoteStateChange = (res) => {
@@ -503,6 +502,13 @@ findWithRegexBorder = (regex, contentBlock, callback) => {
   render() {
     console.log('HEYY',this.state)
     const {editorState} = this.state;
+    let className =  'RichEditor-editor';
+    var contentState = editorState.getCurrentContent()
+    if (!contentState.hasText()) {
+      if (contentState.getBlockMap().first().getType() !== 'unstyled') {
+        className +='RichEditor-hidePlaceholder'
+      }
+    }
     return (
       <MuiThemeProvider muiTheme={muiTheme} >
       <div>
@@ -513,11 +519,20 @@ findWithRegexBorder = (regex, contentBlock, callback) => {
           open = {this.state.open}
           onRequestChange = {(open) => this.setState({open})}>
 
+          <div className = "text-center">
           <AppBar title = "Menu" showMenuIconButton={false} />
+          <MenuItem onClick = {this.finishChanges}>Back</MenuItem>
+          </div>
         </Drawer>
-        <div style = {{padding: '5%'}}>
-          <TextField id="read-only-input"
-            value= {this.props.id}
+
+
+      {this.state.saveHistory === false ?
+      <div className="container">
+        <div style={{display:'flex', flexDirection: 'row'}}>
+          <div style = {{padding: '5%'}}>
+            <TextField id="read-only-input"
+              floatingLabelText = "Document ID"
+              value= {this.props.id}
             />
           <div>
             <TextField
@@ -585,6 +600,7 @@ findWithRegexBorder = (regex, contentBlock, callback) => {
                 editorState={editorState}
                 onChange={this.onChange}
                 textAlignment={'right'}
+                hangleKeyCommand = {this.handleKeyCommand}
                 blockStyleFn = {this.myBlockStyleFn}
                 ref={(ref) => this.editor = ref}
               />
@@ -599,23 +615,126 @@ findWithRegexBorder = (regex, contentBlock, callback) => {
                 label= "View History"
                 onClick = {() => this.viewHistory()}>
                 </RaisedButton>
-              </div>
+              <RaisedButton
+                label="Finish Changes"
+                onClick={this.finishChanges}>
+              </RaisedButton>
             </div>
+          </div>
+      </div>
+    </div>
+  </div>
+   : //THIS IS WHERE THE TURNARY IS
+   <div className="container">
+     <div style={{display:'flex', flexDirection: 'row'}}>
+       <div style = {{flex: 3}}>
+         <TextField id="read-only-input"
+           floatingLabelText = "Document ID"
+           value= {this.props.id}
+         />
+       <div>
+         <TextField
+           hintText="Find in document"
+           onChange={this.onChangeSearch} />
+       </div>
+       <div style={{border: '1px solid black', paddingBottom: 10}}>
+         <div style={styles.toolbar}>
+         <div style = {{display: 'inline-block', position: 'relative', top: '11px'}}>
+         <SelectField
+           hintText="Font Size" style={styles.textSizeField}
+           dropDownMenuProps={{
+             iconButton:<i className="material-icons">arrow_drop_down</i>
+           }}>
+           <MenuItem onClick={this._onH1CLick.bind(this)}>H1</MenuItem>
+           <MenuItem onClick={this._onH2CLick.bind(this)}>H2</MenuItem>
+           <MenuItem onClick={this._onH3CLick.bind(this)}>H3</MenuItem>
+           <MenuItem onClick={this._onH4CLick.bind(this)}>H4</MenuItem>
+           <MenuItem onClick={this._onH5CLick.bind(this)}>H5</MenuItem>
+           <MenuItem onClick={this._onH6CLick.bind(this)}>H6</MenuItem>
+         </SelectField>
 
-          {/* <List>
-            {this.state.historyArr.map((save, index) =>
-            <ListItem
-            key = {index}
-            leftAvatar={<Avatar icon={<ActionAssignment />} backgroundColor={blue500}/>}
-            primaryText = {save.title}
-            secondaryText = {new Date(doc.created).toString().slice(0,15)}
-          />)}
-        </List>} */}
-        {this.props.saveDates.map((save, index) => <RaisedButton onClick = {() => this.viewChanges(index)} key = {index} label={new Date(save).toString().slice(0,15)}></RaisedButton>
-        )}
-      </div>
-      </div>
-        </MuiThemeProvider>
+         <SelectField
+           hintText="Font Color" style={styles.fontColorField}
+           dropDownMenuProps={{
+             iconButton: <i className="material-icons" style={{paddingRight: 10}}>arrow_drop_down</i>
+           }}>
+           <ColorControls
+             editorState={editorState}
+             onToggle={this.toggleColor}
+           />
+         </SelectField>
+         </div>
+           <button>
+             <i className="material-icons" onClick={this._onBoldClick.bind(this)}>format_bold</i>
+           </button>
+           <button>
+             <i className="material-icons" onClick={this._onItalicsClick.bind(this)}>format_italic</i>
+           </button>
+           <button>
+             <i className="material-icons" onClick={this._onUnderlineClick.bind(this)}>format_underlined</i>
+           </button>
+           <button>
+             <i className="material-icons" onClick={this._onBulletListClick.bind(this)}>format_list_bulleted</i>
+           </button>
+           <button>
+             <i className="material-icons" onClick={this._onNumberedListClick.bind(this)}>format_list_numbered</i>
+           </button>
+
+           <button>
+             <i className="material-icons" onClick={this._onLeftAlignClick.bind(this)}>format_align_left</i>
+           </button>
+
+           <button>
+             <i className="material-icons" onClick={this._onCenterAlignClick.bind(this)}>format_align_center</i>
+           </button>
+
+           <button>
+             <i className="material-icons" onClick={this._onRightAlignClick.bind(this)}>format_align_right</i>
+           </button>
+         </div>
+         <div className="editor" style={styles.editor} onClick={this.focus}>
+           <Editor
+             customStyleMap={colorStyleMap}
+             editorState={editorState}
+             onChange={this.onChange}
+             textAlignment={'right'}
+             hangleKeyCommand = {this.handleKeyCommand}
+             blockStyleFn = {this.myBlockStyleFn}
+             ref={(ref) => this.editor = ref}
+           />
+         </div>
+         </div>
+         <div style={{paddingLeft: 10}}>
+           <RaisedButton
+             label={this.state.saved ? "Saved" : "Save"}
+             onClick= {this._onSave.bind(this)}
+             style={{marginRight: 10}}>
+           </RaisedButton>
+           <RaisedButton
+             label= "View History"
+             onClick = {() => this.viewHistory()}>
+             </RaisedButton>
+           <RaisedButton
+             label="Finish Changes"
+             onClick={this.finishChanges}
+             style={{float: 'right'}}>
+           </RaisedButton>
+         </div>
+       </div>
+        <div style = {{flex: 1, marginLeft: '3%'}}>
+          <div style = {{height: '96px'}}>
+            <h3 className = "text-center">Save History </h3>
+          </div>
+        <div style = {{border: '3px solid teal', overflow: 'scroll', overflowX: 'hidden', padding: '2%', height: '80%'}}>
+          <List>
+            {this.state.saveDates.map((save, index) => <ListItem key = {index} primaryText = {"Save " + (index +1)} secondaryText = {new Date(save).toString().slice(4, 24)} onClick = {()=> this.viewChanges(index)} /> )}
+          </List>
+        </div>
+        </div>
+   </div>
+ </div>}
+</div>
+</MuiThemeProvider>
     );
   }
 }
@@ -706,12 +825,9 @@ const styles = {
   },
   editor: {
     cursor: 'text',
-    height: '100%',
-    width: '100%',
-    fontSize: 16,
-    marginTop: 20,
-    minHeight: 400,
-    paddingTop: 20,
+    height: '20%',
+    width: '80%',
+    fontSize: 16
   },
   controls: {
     fontFamily: '\'Helvetica\', sans-serif',
