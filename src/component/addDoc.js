@@ -33,7 +33,7 @@ class AddDoc extends React.Component {
     const {documentID, password} = this.state;
     console.log("document", documentID)
 
-    fetch('http://697b5db9.ngrok.io/adddoc', {
+    fetch('http://3705620f.ngrok.io/adddoc', {
       method: 'POST',
       headers: {
         "Content-Type": "application/json"

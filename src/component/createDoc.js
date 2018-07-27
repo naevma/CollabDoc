@@ -33,7 +33,7 @@ class CreateDoc extends React.Component {
     const {title, password} = this.state;
     console.log("title", title)
 
-    fetch('http://697b5db9.ngrok.io/createdoc', {
+    fetch('http://3705620f.ngrok.io/createdoc', {
       method: 'POST',
       headers: {
         "Content-Type": "application/json"
