@@ -7,4 +7,4 @@ This is a collaborative rich-text editing desktop application. Users are able to
 - Socket.io for real-time editing
 - MaterialUI framework for UI design
 
-[![Google Docs Clone](http://img.youtube.com/vi/BUqEXLV3fxI/0.jpg)](http://www.youtube.com/watch?v=BUqEXLV3fxI "Google Docs Clone")
+[![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/BUqEXLV3fxI/0.jpg)](https://www.youtube.com/watch?v=BUqEXLV3fxI)
